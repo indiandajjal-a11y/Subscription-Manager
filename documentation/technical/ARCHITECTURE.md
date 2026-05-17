@@ -8,6 +8,8 @@ Sprint 2 extends the checkout stub into a ProductOrder lifecycle foundation with
 
 Sprint 3 adds ProductInventory creation, compensation/retry hooks, and channel integration entry points.
 
+Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for live CS validation, and CS-ready account/order validation contracts.
+
 ## Runtime Components
 
 `code/server.js`
@@ -30,6 +32,13 @@ Sprint 3 adds ProductInventory creation, compensation/retry hooks, and channel i
 - Performs pricing, eligibility, cart expiry, checkout, and validation logic
 - Owns Sprint 2 ProductOrder state transitions and fulfillment stub logic
 - Owns Sprint 3 inventory creation, compensation, retry, and channel capture logic
+- Owns Sprint 4 auth token, API key, SubscriberAccount snapshot, and live-account order validation logic
+
+`code/sprint4.js`
+
+- Provides the Sprint 4 ChargingSystemClient abstraction
+- Uses mock CS behavior when `CS_ENDPOINT_URL` is not configured
+- Contains real-call hooks for GAD/GBAD account fetch and SCAPv2 debit/attach operations
 
 `code/postgresPersistence.js`
 
@@ -87,6 +96,13 @@ Sprint 3 adds:
 - `PATCH /api/v1/channels/:channelId`
 - channel-specific request capture routes for USSD, SMS, and CRM
 
+Sprint 4 domain support adds:
+
+- Channel API-key creation through `createChannelWithApiKey`
+- JWT issue, validation, revocation, and active-token listing helpers
+- SubscriberAccount snapshots linked to ProductOrder
+- ProductOrder validation using live SubscriberAccount data instead of request-body subscriber attributes
+
 ## Testing Strategy
 
 `testing/sprint1.test.js`
@@ -104,6 +120,11 @@ Sprint 3 adds:
 `testing/sprint3.test.js`
 
 - Inventory creation, compensation, retry, and channel request tests
+
+`testing/sprint4.test.js`
+
+- Channel auth token issue, validation, API key fallback, and revocation tests
+- SubscriberAccount-backed ProductOrder validation tests
 
 Run all tests:
 

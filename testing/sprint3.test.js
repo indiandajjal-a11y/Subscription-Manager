@@ -90,7 +90,7 @@ test("Sprint 3 inventory creation is idempotent for repeated completed order han
   const order = completedOrder(db);
   assert.deepEqual(reason(() => executeProductOrderFulfillment(db, order.id, {})), {
     status: 409,
-    reasonCode: "ORDER_NOT_FULFILLABLE"
+    reasonCode: "INVALID_ORDER_STATE_TRANSITION"
   });
   assert.equal(listProductInventory(db, { subscriberId: order.subscriberId }).length, 1);
 });

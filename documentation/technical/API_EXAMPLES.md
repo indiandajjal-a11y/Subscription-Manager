@@ -102,6 +102,14 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/
 }'
 ```
 
+Remove an item:
+
+```powershell
+Invoke-RestMethod -Method DELETE -Uri "http://localhost:3000/api/v1/cart/{cartId}/items/{itemId}"
+```
+
+Successful item removal returns `204 No Content`. If the cart was previously `validated`, removal resets it to `active` and clears stale item validation/pricing.
+
 Validate and price the cart:
 
 ```powershell
@@ -145,10 +153,18 @@ Validate an order before fulfillment:
 
 ```powershell
 Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderId}/validate" -ContentType "application/json" -Body '{
-  "subscriberEligible": true,
-  "balanceSufficient": true
+  "subscriberAttributes": {
+    "serviceClass": "PREPAID",
+    "segment": "CONSUMER",
+    "balance": {
+      "MA": 1000,
+      "DA": []
+    }
+  }
 }'
 ```
+
+Validation uses prompt-standard failure reason codes, including `OFFERING_NO_LONGER_AVAILABLE`, `CHANNEL_NOT_AUTHORIZED`, `SUBSCRIBER_INELIGIBLE`, and `INSUFFICIENT_BALANCE`.
 
 Move an order to `inProgress`:
 

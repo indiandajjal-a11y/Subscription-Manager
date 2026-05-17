@@ -7,12 +7,12 @@ const VALUE_TYPES = ["number", "string", "boolean"];
 const PRICE_TYPES = ["standard", "discount"];
 const CHARGING_SOURCES = ["MA", "DA", "LOYALTY", "MOBILE_MONEY"];
 const DISCOUNT_TYPES = ["fixed", "percentage"];
-const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "channel"];
+const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "channel", "psoFlag"]; // Sprint 4: added psoFlag
 const OPERATORS = ["equals", "notEquals", "in", "notIn"];
 const POLICIES = ["one-off", "auto-renewal", "gift"];
 const ORDER_STATUSES = ["acknowledged", "inProgress", "completed", "failed", "cancelled"];
 const FULFILLMENT_STEPS = ["debit", "attachOffer", "neaActivation"];
-const CHANNEL_TYPES = ["USSD", "SMS", "WEB", "CRM", "MOBILE_APP", "THIRD_PARTY", "SELF_CARE"];
+const CHANNEL_TYPES = ["USSD", "SMS", "WEB", "CRM", "MOBILE_APP", "THIRD_PARTY", "SELF_CARE", "API_PARTNER"]; // Sprint 4: added API_PARTNER
 const CHANNEL_STATUSES = ["active", "inactive"];
 const REQUIRED_CHARACTERISTICS = {
   dataVolume: { valueType: "number", units: ["GB", "MB"] },
@@ -395,6 +395,13 @@ export function removeCartItem(db, cartId, itemId) {
   const cart = getShoppingCart(db, cartId, false);
   if (!cart.items.some((item) => item.id === itemId)) fail(404, "CART_ITEM_NOT_FOUND", "CartItem was not found.", "itemId");
   cart.items = cart.items.filter((item) => item.id !== itemId);
+  cart.status = "active";
+  for (const item of cart.items) {
+    item.validationStatus = "pending";
+    item.validationReasonCode = null;
+    item.pricedAmount = null;
+    item.pricedCurrency = null;
+  }
   cart.updatedAt = nowIso();
 }
 
@@ -566,7 +573,7 @@ export function getProductOrder(db, orderId) {
 function transitionProductOrder(order, nextStatus, reason) {
   assertEnum(nextStatus, ORDER_STATUSES, "status");
   const allowed = {
-    acknowledged: ["inProgress", "cancelled"],
+    acknowledged: ["inProgress", "failed", "cancelled"],
     inProgress: ["completed", "failed", "cancelled"],
     completed: [],
     failed: [],
@@ -577,6 +584,9 @@ function transitionProductOrder(order, nextStatus, reason) {
   }
   const timestamp = nowIso();
   order.status = nextStatus;
+  if (["completed", "failed", "cancelled"].includes(nextStatus) && !order.completedAt) {
+    order.completedAt = timestamp;
+  }
   order.updatedAt = timestamp;
   order.stateHistory.push({ id: randomUUID(), eventType: "OrderStateChangeEvent", status: nextStatus, changedAt: timestamp, reason });
   return order;
@@ -608,9 +618,10 @@ function recordOrderValidationResult(db, order, result) {
 export function validateProductOrder(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "acknowledged") {
-    fail(409, "ORDER_NOT_VALIDATABLE", "Only acknowledged ProductOrders can be validated.", "status");
+    fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to inProgress.`, "status");
   }
   const failureReasonCodes = [];
+  const subscriberAttributes = body.subscriberAttributes || body;
   const cart = db.shoppingCarts.get(order.cartId);
   if (!cart || cart.status !== "checkedOut") {
     failureReasonCodes.push("SOURCE_CART_NOT_CHECKED_OUT");
@@ -627,17 +638,38 @@ export function validateProductOrder(db, orderId, body = {}) {
     return !offering || autoRetireIfSunset(offering).status !== "active";
   });
   if (inactiveOfferingItem) {
-    failureReasonCodes.push("ORDER_OFFERING_NOT_ACTIVE");
+    inactiveOfferingItem.status = "failed";
+    inactiveOfferingItem.failureReasonCode = "OFFERING_NO_LONGER_AVAILABLE";
+    failureReasonCodes.push("OFFERING_NO_LONGER_AVAILABLE");
   }
-  const subscriberEligible = body.subscriberEligible !== false;
-  if (!subscriberEligible) failureReasonCodes.push("SUBSCRIBER_NOT_ELIGIBLE");
-  const balanceSufficient = body.balanceSufficient !== false;
-  if (!balanceSufficient) failureReasonCodes.push("INSUFFICIENT_BALANCE");
-  const channelValid = !order.items.some((item) => {
+  let subscriberEligible = body.subscriberEligible !== false;
+  let balanceSufficient = body.balanceSufficient !== false;
+  let channelValid = true;
+  for (const item of order.items) {
     const offering = db.productOfferings.get(item.productOfferingId);
-    return offering?.channelAvailability?.length > 0 && !offering.channelAvailability.includes(order.channelId);
-  });
-  if (!channelValid) failureReasonCodes.push("CHANNEL_NOT_ALLOWED");
+    if (!offering || autoRetireIfSunset(offering).status !== "active") continue;
+    if (offering.channelAvailability.length > 0 && !offering.channelAvailability.includes(order.channelId)) {
+      channelValid = false;
+    }
+    const failedRule = offering.eligibilityRules.find((rule) => !ruleMatches(rule, subscriberAttributes, { channelId: order.channelId }));
+    if (failedRule) {
+      subscriberEligible = false;
+    }
+    const balance = subscriberAttributes.balance;
+    if (balance) {
+      const price = selectPrice(offering, order.currency, subscriberAttributes);
+      const requiredAmount = Number(item.pricedAmount ?? ((price?.amount || 0) * item.quantity));
+      if (price?.chargingSource === "DA" && price.daId) {
+        const da = Array.isArray(balance.DA) ? balance.DA.find((candidate) => candidate.daId === price.daId) : null;
+        if (!da || Number(da.balance || 0) < requiredAmount) balanceSufficient = false;
+      } else if (Number(balance.MA || 0) < requiredAmount) {
+        balanceSufficient = false;
+      }
+    }
+  }
+  if (!subscriberEligible) failureReasonCodes.push("SUBSCRIBER_INELIGIBLE");
+  if (!balanceSufficient) failureReasonCodes.push("INSUFFICIENT_BALANCE");
+  if (!channelValid) failureReasonCodes.push("CHANNEL_NOT_AUTHORIZED");
 
   const validation = recordOrderValidationResult(db, order, {
     channelValid,
@@ -651,6 +683,11 @@ export function validateProductOrder(db, orderId, body = {}) {
     order.validationStatus = "invalid";
     order.validationReasonCode = failureReasonCodes[0];
     order.updatedAt = validation.validatedAt;
+    if (!validation.offeringAvailable) {
+      order.failureReasonCode = "OFFERING_NO_LONGER_AVAILABLE";
+      order.failureMessage = "Order validation failed: offering no longer available.";
+      transitionProductOrder(order, "failed", "OFFERING_NO_LONGER_AVAILABLE");
+    }
     fail(422, failureReasonCodes[0], "ProductOrder validation failed.", "validationResult");
   }
   order.validationStatus = "valid";
@@ -679,7 +716,7 @@ function fulfillmentStep(order, stepName, status, requestPayload, responsePayloa
 
 export function executeProductOrderFulfillment(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
-  if (order.status !== "inProgress") fail(409, "ORDER_NOT_FULFILLABLE", "Only in-progress ProductOrders can be fulfilled.", "status");
+  if (order.status !== "inProgress") fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to completed.`, "status");
   if (order.validationStatus !== "valid" || !order.validatedAt) fail(409, "ORDER_NOT_VALIDATED", "ProductOrder must be validated before fulfillment.", "status");
 
   const failedStep = body.failedStep;
@@ -750,7 +787,7 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
 export function cancelProductOrder(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "acknowledged") {
-    fail(409, "ORDER_CANNOT_BE_CANCELLED", "Sprint 2 only supports cancellation before validation.", "status");
+    fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to cancelled.`, "status");
   }
   for (const item of order.items) {
     item.status = "cancelled";
@@ -960,4 +997,441 @@ export function listChannelInteractions(db, query = {}) {
     .filter((item) => !query.channelId || item.channelId === query.channelId)
     .filter((item) => !query.subscriberId || item.subscriberId === query.subscriberId)
     .filter((item) => !query.status || item.status === query.status);
+}
+
+// ============================================================================
+// Sprint 4 — Authentication & CS Integration
+// ============================================================================
+
+import { createHmac, createHash } from "node:crypto";
+
+const AUTH_CHANNEL_TYPES_JWT_ONLY = ["CRM", "MOBILE_APP"];
+const AUTH_CHANNEL_TYPES_APIKEY_ALLOWED = ["USSD", "API_PARTNER", "THIRD_PARTY"];
+
+/**
+ * Simple JWT implementation (stateless, HS256)
+ */
+function signJwt(payload, secret) {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payloadB64 = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = createHmac("sha256", secret).update(`${header}.${payloadB64}`).digest("base64url");
+  return `${header}.${payloadB64}.${signature}`;
+}
+
+function verifyJwt(token, secret) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const [header, payloadB64, sig] = parts;
+    const expectedSig = createHmac("sha256", secret).update(`${header}.${payloadB64}`).digest("base64url");
+    if (sig !== expectedSig) return null;
+    return JSON.parse(Buffer.from(payloadB64, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function hashApiKey(key) {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+function hashToken(token) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * US-011: Issue a JWT to an authenticated channel
+ */
+export function issueChannelAuthToken(db, body = {}, config = {}) {
+  const jwtSecret = config.jwtSecret || process.env.JWT_SECRET || "change-me-in-production";
+  const jwtTtlSeconds = Number(config.jwtTtlSeconds || process.env.JWT_TTL_SECONDS || 3600);
+
+  assertRequired(body.channelId, "channelId");
+  assertRequired(body.apiKey, "apiKey");
+
+  // Find channel by channelId short name or channel name
+  const channel = [...db.channels.values()].find(
+    (ch) => (ch.channelId || ch.name) === body.channelId
+  );
+  if (!channel) fail(401, "INVALID_CREDENTIALS", "Invalid credentials.", "authorization");
+  if (channel.status !== "active") fail(403, "CHANNEL_INACTIVE", "Channel is inactive.", "authorization");
+
+  // Validate API key
+  const providedHash = hashApiKey(body.apiKey);
+  if (channel.apiKeyHash !== providedHash) {
+    fail(401, "INVALID_CREDENTIALS", "Invalid credentials.", "authorization");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    channelId: channel.channelId || channel.name,
+    channelType: channel.type,
+    iat: now,
+    exp: now + jwtTtlSeconds
+  };
+
+  const token = signJwt(payload, jwtSecret);
+  const tokenHash = hashToken(token);
+
+  const authTokenRecord = {
+    id: randomUUID(),
+    channelId: payload.channelId,
+    tokenHash,
+    issuedAt: new Date().toISOString(),
+    expiresAt: new Date((now + jwtTtlSeconds) * 1000).toISOString(),
+    revokedAt: null,
+    revokedBy: null,
+    lastUsedAt: null
+  };
+
+  if (!db.channelAuthTokens) db.channelAuthTokens = new Map();
+  db.channelAuthTokens.set(authTokenRecord.id, authTokenRecord);
+
+  return {
+    accessToken: token,
+    tokenType: "Bearer",
+    expiresIn: jwtTtlSeconds,
+    channelId: payload.channelId
+  };
+}
+
+/**
+ * US-011: Revoke a token
+ */
+export function revokeChannelAuthToken(db, body = {}) {
+  assertRequired(body.token, "token");
+  const tokenHash = hashToken(body.token);
+
+  if (!db.channelAuthTokens) db.channelAuthTokens = new Map();
+  const record = [...db.channelAuthTokens.values()].find((t) => t.tokenHash === tokenHash);
+  if (!record) fail(404, "TOKEN_NOT_FOUND", "Token was not found.", "token");
+  if (record.revokedAt) fail(409, "TOKEN_ALREADY_REVOKED", "Token is already revoked.", "token");
+
+  record.revokedAt = nowIso();
+  record.revokedBy = body.revokedBy || "system";
+
+  // Add to in-memory revocation set
+  if (!db.revokedTokens) db.revokedTokens = new Set();
+  db.revokedTokens.add(body.token);
+
+  return { revoked: true, tokenHash };
+}
+
+/**
+ * US-011: List active tokens for a channel
+ */
+export function listChannelAuthTokens(db, query = {}) {
+  if (!db.channelAuthTokens) return [];
+  return [...db.channelAuthTokens.values()]
+    .filter((t) => !query.channelId || t.channelId === query.channelId)
+    .filter((t) => !t.revokedAt)
+    .filter((t) => new Date(t.expiresAt).getTime() > Date.now());
+}
+
+/**
+ * US-011: Validate Bearer token or API key from request
+ * Returns { channelId, channelType } on success
+ */
+export function validateChannelAuth(db, headers = {}, config = {}) {
+  const jwtSecret = config.jwtSecret || process.env.JWT_SECRET || "change-me-in-production";
+  const authHeader = headers.authorization || headers.Authorization || "";
+  const apiKeyHeader = headers["x-api-key"] || "";
+
+  if (authHeader.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+
+    // Check revocation
+    if (db.revokedTokens?.has(token)) {
+      fail(401, "TOKEN_REVOKED", "This token has been revoked.", "authorization");
+    }
+
+    // Verify JWT
+    const payload = verifyJwt(token, jwtSecret);
+    if (!payload) fail(401, "INVALID_TOKEN", "Invalid token signature.", "authorization");
+
+    // Check expiry
+    if (payload.exp && Date.now() > payload.exp * 1000) {
+      fail(401, "TOKEN_EXPIRED", "The Bearer token has expired. Request a new token from POST /api/v1/auth/token.", "authorization");
+    }
+
+    // Verify channel still active
+    const channel = [...db.channels.values()].find(
+      (ch) => (ch.channelId || ch.name) === payload.channelId
+    );
+    if (!channel) fail(401, "UNKNOWN_CHANNEL", "Channel not found.", "authorization");
+    if (channel.status !== "active") fail(403, "CHANNEL_INACTIVE", "Channel is inactive.", "authorization");
+
+    // Update lastUsedAt async (best-effort)
+    if (db.channelAuthTokens) {
+      const tokenHash = hashToken(token);
+      const record = [...db.channelAuthTokens.values()].find((t) => t.tokenHash === tokenHash);
+      if (record) record.lastUsedAt = nowIso();
+    }
+
+    return { channelId: payload.channelId, channelType: payload.channelType };
+  }
+
+  if (apiKeyHeader) {
+    const keyHash = hashApiKey(apiKeyHeader);
+    const channel = [...db.channels.values()].find((ch) => ch.apiKeyHash === keyHash);
+    if (!channel) fail(401, "INVALID_CREDENTIALS", "Invalid credentials.", "authorization");
+    if (channel.status !== "active") fail(403, "CHANNEL_INACTIVE", "Channel is inactive.", "authorization");
+
+    const channelType = channel.type;
+    if (AUTH_CHANNEL_TYPES_JWT_ONLY.includes(channelType)) {
+      fail(401, "AUTH_METHOD_NOT_ALLOWED", `API key auth not allowed for ${channelType} channels. Use JWT Bearer token.`, "authorization");
+    }
+
+    return { channelId: channel.channelId || channel.name, channelType: channel.type };
+  }
+
+  fail(401, "MISSING_TOKEN", "Authentication required. Provide Bearer token or X-API-Key header.", "authorization");
+}
+
+/**
+ * US-012: Store SubscriberAccount snapshot fetched from CS
+ */
+export function createSubscriberAccountSnapshot(db, orderId, csData) {
+  if (!db.subscriberAccounts) db.subscriberAccounts = new Map();
+  const snapshot = {
+    id: randomUUID(),
+    orderId,
+    subscriberId: csData.subscriberId,
+    serviceClass: csData.serviceClass || "PREPAID",
+    segment: csData.segment || "CONSUMER",
+    mainBalance: Number(csData.mainBalance || 0),
+    currency: csData.currency || "NGN",
+    daBalances: (csData.daBalances || []).map((da) => ({
+      daId: da.daId,
+      balance: Number(da.balance || 0),
+      priority: Number(da.priority || 9999)
+    })),
+    psoFlags: csData.psoFlags || "",
+    offerIds: csData.offerIds || [],
+    expiryDate: csData.expiryDate || null,
+    fetchedAt: nowIso(),
+    csResponseCode: csData.responseCode || csData.csResponseCode || "0",
+    csRawResponse: csData.rawResponse || csData.csRawResponse || {}
+  };
+  db.subscriberAccounts.set(snapshot.id, snapshot);
+  return snapshot;
+}
+
+/**
+ * Get the subscriber account snapshot linked to an order
+ */
+export function getSubscriberAccountByOrder(db, orderId) {
+  if (!db.subscriberAccounts) return null;
+  return [...db.subscriberAccounts.values()].find((a) => a.orderId === orderId) || null;
+}
+
+/**
+ * US-013: Validate order using live SubscriberAccount data (Sprint 4 version)
+ * This replaces the Sprint 2/3 request-body subscriber attributes approach
+ */
+export function validateProductOrderWithSubscriberAccount(db, orderId, subscriberAccount) {
+  const order = getProductOrder(db, orderId);
+  if (order.status !== "acknowledged") {
+    fail(409, "ORDER_NOT_VALIDATABLE", "Only acknowledged ProductOrders can be validated.", "status");
+  }
+  if (!subscriberAccount) {
+    fail(422, "CS_SUBSCRIBER_FETCH_FAILED", "Subscriber account data is required for order validation.", "subscriberAccount");
+  }
+
+  const failureReasonCodes = [];
+  let channelValid = true;
+  let subscriberEligible = true;
+  let offeringAvailable = true;
+  let balanceSufficient = true;
+
+  // 1. Cart still valid
+  const cart = db.shoppingCarts.get(order.cartId);
+  if (!cart || cart.status !== "checkedOut") {
+    failureReasonCodes.push("SOURCE_CART_NOT_CHECKED_OUT");
+  }
+
+  // 2. Check each item
+  for (const item of order.items) {
+    const offering = db.productOfferings.get(item.productOfferingId);
+    if (!offering || autoRetireIfSunset(offering).status !== "active") {
+      offeringAvailable = false;
+      failureReasonCodes.push("OFFERING_NO_LONGER_AVAILABLE");
+      continue;
+    }
+
+    // Channel authorization
+    if (offering.channelAvailability.length > 0 && !offering.channelAvailability.includes(order.channelId)) {
+      channelValid = false;
+      failureReasonCodes.push("CHANNEL_NOT_AUTHORIZED");
+    }
+
+    // Eligibility rules against live CS data
+    const attributes = {
+      serviceClass: subscriberAccount.serviceClass,
+      segment: subscriberAccount.segment,
+      channel: order.channelId
+    };
+
+    for (const rule of offering.eligibilityRules) {
+      if (rule.ruleType === "multiPurchase") {
+        // Check if offering already attached on CS
+        if (subscriberAccount.offerIds.includes(offering.id) || subscriberAccount.offerIds.includes(item.productOfferingId)) {
+          subscriberEligible = false;
+          failureReasonCodes.push("MULTI_PURCHASE_NOT_ALLOWED");
+        }
+      } else if (rule.ruleType === "psoFlag") {
+        // PSO flag check
+        if (!subscriberAccount.psoFlags.includes(rule.value)) {
+          subscriberEligible = false;
+          failureReasonCodes.push("PSO_FLAG_INELIGIBLE");
+        }
+      } else if (!ruleMatches(rule, attributes, { channelId: order.channelId })) {
+        subscriberEligible = false;
+        failureReasonCodes.push(rule.failureReasonCode || "SUBSCRIBER_INELIGIBLE");
+      }
+    }
+
+    // Balance pre-check using live CS data (single source, Sprint 4 scope)
+    const selectedPrice = selectPrice(offering, order.currency, attributes);
+    if (selectedPrice) {
+      const requiredAmount = Number((selectedPrice.amount * item.quantity).toFixed(2));
+      if (selectedPrice.chargingSource === "MA") {
+        if (subscriberAccount.mainBalance < requiredAmount) {
+          balanceSufficient = false;
+          failureReasonCodes.push("INSUFFICIENT_BALANCE");
+        }
+      } else if (selectedPrice.chargingSource === "DA" && selectedPrice.daId) {
+        const daAccount = subscriberAccount.daBalances.find((da) => da.daId === selectedPrice.daId);
+        if (!daAccount || daAccount.balance < requiredAmount) {
+          balanceSufficient = false;
+          failureReasonCodes.push("INSUFFICIENT_BALANCE");
+        }
+      }
+    }
+  }
+
+  const overallValid = failureReasonCodes.length === 0;
+
+  // Link subscriber account to order
+  order.subscriberAccountId = subscriberAccount.id;
+
+  const validation = recordOrderValidationResult(db, order, {
+    channelValid,
+    subscriberEligible,
+    offeringAvailable,
+    balanceSufficient,
+    overallValid,
+    failureReasonCodes
+  });
+
+  if (!overallValid) {
+    order.validationStatus = "invalid";
+    order.validationReasonCode = failureReasonCodes[0];
+    order.updatedAt = validation.validatedAt;
+    // Transition to failed for critical failures
+    if (!offeringAvailable) {
+      transitionProductOrder(order, "failed", failureReasonCodes[0]);
+      order.failureReasonCode = failureReasonCodes[0];
+      order.failureMessage = "Order validation failed: offering no longer available.";
+      order.completedAt = nowIso();
+    }
+    fail(422, failureReasonCodes[0], "ProductOrder validation failed.", "validationResult");
+  }
+
+  order.validationStatus = "valid";
+  order.validationReasonCode = null;
+  order.validatedAt = validation.validatedAt;
+  for (const item of order.items) item.status = "inProgress";
+  transitionProductOrder(order, "inProgress", "Order validation passed with live CS data");
+  return order;
+}
+
+/**
+ * US-017: Create ProductInventory with Sprint 4 extended fields
+ */
+export function createProductInventoryWithSprint4Fields(db, order, options = {}) {
+  for (const item of order.items) {
+    const exists = [...db.productInventories.values()].some((inv) => inv.orderItemId === item.id);
+    if (exists) continue;
+
+    const timestamp = nowIso();
+    const inventory = {
+      id: randomUUID(),
+      productOrderId: order.id,
+      orderItemId: item.id,
+      subscriberId: item.beneficiaryId || order.subscriberId,
+      sponsorId: item.beneficiaryId ? order.subscriberId : undefined,
+      channelId: order.channelId,
+      productOfferingId: item.productOfferingId,
+      quantity: item.quantity,
+      status: "active",
+      activatedAt: timestamp,
+      expiresAt: inventoryExpiryForOffering(db, item.productOfferingId),
+      // Sprint 4 extended fields (US-017 closure)
+      renewalOfferId: options.renewalOfferId || null,
+      refillId: options.refillId || null,
+      notificationFlags: {
+        onActivation: options.notificationFlags?.onActivation ?? true,
+        onRenewal: options.notificationFlags?.onRenewal ?? true,
+        onExpiry: options.notificationFlags?.onExpiry ?? true,
+        onFailure: options.notificationFlags?.onFailure ?? true
+      },
+      csAttachmentId: options.csAttachmentId || null,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    };
+    db.productInventories.set(inventory.id, inventory);
+
+    // Link inventory to order as subscriptionId
+    order.subscriptionId = inventory.id;
+  }
+}
+
+/**
+ * Create channel with Sprint 4 fields (apiKeyHash, channelId, allowedOfferingIds, authMethod)
+ */
+export function createChannelWithApiKey(db, body = {}) {
+  assertRequired(body.name, "name");
+  assertRequired(body.type, "type");
+  assertEnum(body.type, CHANNEL_TYPES, "type");
+
+  const shortChannelId = body.channelId || body.name;
+
+  // Check unique channelId (short identifier)
+  const duplicateById = [...db.channels.values()].find(
+    (ch) => (ch.channelId || ch.name) === shortChannelId && ch.id !== undefined
+  );
+  if (duplicateById) fail(409, "CHANNEL_ID_ALREADY_EXISTS", "Channel channelId must be unique.", "channelId");
+
+  // Check unique name
+  const duplicateName = [...db.channels.values()].find((ch) => ch.name === body.name);
+  if (duplicateName) fail(409, "DUPLICATE_CHANNEL", "Channel name must be unique.", "name");
+
+  // Generate API key
+  const rawApiKey = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+  const apiKeyHash = hashApiKey(rawApiKey);
+
+  const timestamp = nowIso();
+  const channel = {
+    id: randomUUID(),
+    channelId: shortChannelId,
+    name: body.name,
+    type: body.type,
+    status: body.status || "active",
+    authMethod: body.authMethod || "apiKey",
+    apiKeyHash,
+    allowedOfferingIds: body.allowedOfferingIds || [],
+    contactPoint: body.contactPoint || null,
+    metadata: body.metadata || {},
+    externalId: body.externalId,
+    callbackUrl: body.callbackUrl,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+
+  assertEnum(channel.status, CHANNEL_STATUSES, "status");
+  db.channels.set(channel.id, channel);
+
+  // Return with raw API key (shown only once)
+  return { ...channel, apiKey: rawApiKey };
 }

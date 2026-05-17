@@ -16,6 +16,8 @@ import {
   executeProductOrderFulfillment,
   getProductOrder,
   listProductOrders,
+  removeCartItem,
+  retireProductOffering,
   updateProductOrderState,
   validateProductOrder,
   validateShoppingCart
@@ -138,6 +140,75 @@ test("Sprint 2 stores failed OrderValidationResult details", () => {
   assert.equal(order.validationResult.balanceSufficient, false);
 });
 
+test("Sprint 2 removing an item from a validated cart resets stale validation", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+
+  assert.equal(cart.status, "validated");
+  removeCartItem(db, cart.id, cart.items[0].id);
+
+  assert.equal(cart.status, "active");
+  assert.equal(cart.items.length, 0);
+});
+
+test("Sprint 2 validation uses prompt reason codes and fails critically unavailable offerings", () => {
+  const db = createStore();
+  const { cart, offering } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  retireProductOffering(db, offering.id);
+
+  assert.deepEqual(reason(() => validateProductOrder(db, order.id)), {
+    status: 422,
+    reasonCode: "OFFERING_NO_LONGER_AVAILABLE"
+  });
+  assert.equal(order.status, "failed");
+  assert.equal(order.items[0].status, "failed");
+  assert.ok(order.completedAt);
+});
+
+test("Sprint 2 validation re-evaluates subscriber attributes and balances", () => {
+  const db = createStore();
+  const spec = activateProductSpecification(db, createProductSpecification(db, {
+    name: `Sprint 2 Eligibility Spec ${randomUUID()}`,
+    version: "1.0",
+    characteristics
+  }).id);
+  const offering = createProductOffering(db, {
+    name: `Sprint 2 Eligibility Offering ${randomUUID()}`,
+    productSpecificationId: spec.id,
+    channelAvailability: ["USSD"],
+    eligibilityRules: [{
+      ruleType: "segment",
+      operator: "equals",
+      value: "CONSUMER",
+      failureReasonCode: "SUBSCRIBER_INELIGIBLE"
+    }]
+  });
+  addProductOfferingPrice(db, offering.id, {
+    priceType: "standard",
+    amount: 250,
+    currency: "NGN",
+    chargingSource: "MA",
+    isDefault: true
+  });
+  activateProductOffering(db, offering.id);
+  const cart = createShoppingCart(db, { channelId: "USSD", subscriberId: "2348012345678", currency: "NGN" });
+  addCartItem(db, cart.id, { productOfferingId: offering.id });
+  validateShoppingCart(db, cart.id, { subscriberAttributes: { segment: "CONSUMER" } });
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.deepEqual(reason(() => validateProductOrder(db, order.id, {
+    subscriberAttributes: {
+      segment: "BUSINESS",
+      balance: { MA: 1000, DA: [] }
+    }
+  })), {
+    status: 422,
+    reasonCode: "SUBSCRIBER_INELIGIBLE"
+  });
+});
+
 test("Sprint 2 enforces allowed ProductOrder state transitions", () => {
   const db = createStore();
   const { cart } = createValidatedCart(db);
@@ -191,6 +262,6 @@ test("Sprint 2 cancellation is allowed before completion and blocked after compl
   executeProductOrderFulfillment(db, second.id, {});
   assert.deepEqual(reason(() => cancelProductOrder(db, second.id, { reason: "Too late" })), {
     status: 409,
-    reasonCode: "ORDER_CANNOT_BE_CANCELLED"
+    reasonCode: "INVALID_ORDER_STATE_TRANSITION"
   });
 });

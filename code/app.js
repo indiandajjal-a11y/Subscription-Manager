@@ -198,7 +198,8 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       if ((params = is(method, "DELETE", pathname, "/api/v1/cart/:cartId/items/:itemId"))) {
         removeCartItem(db, params.cartId, params.itemId);
         await saveIfNeeded(persistence, db);
-        return send(res, 200, { deleted: true });
+        res.writeHead(204);
+        return res.end();
       }
       if ((params = is(method, "POST", pathname, "/api/v1/cart/:cartId/validate"))) {
         const result = validateShoppingCart(db, params.cartId, await readJson(req));
