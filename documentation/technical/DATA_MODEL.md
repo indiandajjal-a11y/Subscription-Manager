@@ -104,6 +104,12 @@ Key fields:
 - `completedAt`
 - `stateHistory`
 - `fulfillment`
+- `originalOrderId`
+- `cancellationReasonCode`
+- `compensationPolicy`
+- `retryCount`
+- `maxRetries`
+- `retryIntervalSeconds`
 
 ## ProductOrderItem
 
@@ -174,6 +180,15 @@ Key fields:
 - `status`
 - `activatedAt`
 - `expiresAt`
+- `startDate`
+- `endDate`
+- `renewalEnabled`
+- `chargingSource`
+- `daId`
+- `amountCharged`
+- `currency`
+- `beneficiaryId`
+- `terminatedAt`
 
 Statuses:
 
@@ -217,6 +232,43 @@ Key fields:
 - `orderId`
 - `status`
 - `reasonCode`
+
+## CompensationConfig
+
+Configures the compensation policy for a ProductOffering.
+
+Supported policies:
+
+- `none`
+- `creditBack`
+- `retry`
+
+## CompensationRecord
+
+Audit record for credit-back or retry compensation attempts.
+
+Key fields:
+
+- `orderId`
+- `compensationType`
+- `attemptNumber`
+- `status`
+- `requestPayload`
+- `responsePayload`
+- `executedAt`
+- `failureReason`
+
+## NotificationEvent
+
+Placeholder event written by order and compensation flows for Sprint 7 dispatch.
+
+Event types:
+
+- `ORDER_COMPLETED`
+- `ORDER_FAILED`
+- `ORDER_CANCELLED`
+- `COMPENSATION_COMPLETED`
+- `COMPENSATION_FAILED`
 
 ## SubscriberAccount
 

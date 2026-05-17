@@ -11,9 +11,10 @@ const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "chan
 const OPERATORS = ["equals", "notEquals", "in", "notIn"];
 const POLICIES = ["one-off", "auto-renewal", "gift"];
 const ORDER_STATUSES = ["acknowledged", "inProgress", "completed", "failed", "cancelled"];
-const FULFILLMENT_STEPS = ["debit", "attachOffer", "neaActivation"];
-const CHANNEL_TYPES = ["USSD", "SMS", "WEB", "CRM", "MOBILE_APP", "THIRD_PARTY", "SELF_CARE", "API_PARTNER"]; // Sprint 4: added API_PARTNER
+const FULFILLMENT_STEPS = ["debit", "attachOffer", "neaActivation", "removeOffer", "neaDeactivation"];
+const CHANNEL_TYPES = ["USSD", "SMS", "WEB", "CRM", "MOBILE_APP", "THIRD_PARTY", "SELF_CARE", "API_PARTNER", "WEB_PORTAL", "IVR", "VOUCHER"]; // Sprint 4: added API_PARTNER
 const CHANNEL_STATUSES = ["active", "inactive"];
+const COMPENSATION_TYPES = ["none", "creditBack", "retry"];
 const REQUIRED_CHARACTERISTICS = {
   dataVolume: { valueType: "number", units: ["GB", "MB"] },
   validityPeriod: { valueType: "number", units: ["days"] },
@@ -207,10 +208,13 @@ export function autoRetireIfSunset(offering) {
 }
 
 export function listProductOfferings(db, query = {}) {
+  const channel = query.channelId ? [...db.channels.values()].find((item) => item.id === query.channelId || item.channelId === query.channelId || item.name === query.channelId) : null;
+  const allowedOfferingIds = channel?.allowedOfferingIds || [];
   return [...db.productOfferings.values()]
     .map(autoRetireIfSunset)
     .filter((item) => !query.status || item.status === query.status)
-    .filter((item) => !query.channelId || item.channelAvailability.length === 0 || item.channelAvailability.includes(query.channelId));
+    .filter((item) => !query.channelId || item.channelAvailability.length === 0 || item.channelAvailability.includes(query.channelId))
+    .filter((item) => allowedOfferingIds.length === 0 || allowedOfferingIds.includes(item.id));
 }
 
 export function getProductOffering(db, id) {
@@ -328,6 +332,11 @@ export function createShoppingCart(db, body, config = configFromEnv()) {
   assertRequired(body.channelId, "channelId");
   assertRequired(body.subscriberId, "subscriberId");
   assertRequired(body.currency, "currency");
+  if (db.channels?.size > 0) {
+    const channel = [...db.channels.values()].find((item) => item.id === body.channelId || item.channelId === body.channelId || item.name === body.channelId);
+    if (!channel) fail(422, "UNKNOWN_CHANNEL", "Channel is not registered.", "channelId");
+    if (channel.status !== "active") fail(422, "CHANNEL_INACTIVE", "Channel is inactive.", "channelId");
+  }
   const currency = String(body.currency).toUpperCase();
   if (!config.supportedCurrencies.includes(currency)) fail(422, "UNSUPPORTED_CURRENCY", "Cart currency is not supported.", "currency");
   const timestamp = nowIso();
@@ -501,6 +510,7 @@ export function checkoutShoppingCart(db, cartId) {
   const duplicateOrder = [...db.productOrders.values()].find((candidate) => candidate.cartId === cartId && candidate.status !== "cancelled");
   if (duplicateOrder) fail(409, "ORDER_ALREADY_EXISTS", "A ProductOrder already exists for this ShoppingCart.", "cartId");
   const timestamp = nowIso();
+  const compensationConfig = compensationConfigForOrder(db, cart.items);
   const order = {
     id: randomUUID(),
     cartId,
@@ -508,6 +518,12 @@ export function checkoutShoppingCart(db, cartId) {
     channelId: cart.channelId,
     currency: cart.currency,
     orderType: "provision",
+    originalOrderId: null,
+    cancellationReasonCode: null,
+    compensationPolicy: compensationConfig?.compensationType || "none",
+    retryCount: 0,
+    maxRetries: compensationConfig?.maxRetries ?? null,
+    retryIntervalSeconds: compensationConfig?.retryIntervalSeconds ?? null,
     status: "acknowledged",
     failureReasonCode: null,
     failureMessage: null,
@@ -619,6 +635,89 @@ function recordOrderValidationResult(db, order, result) {
   return validation;
 }
 
+function compensationConfigForOrder(db, items = []) {
+  if (!db.compensationConfigs) db.compensationConfigs = new Map();
+  const firstConfiguredItem = items.find((item) => db.compensationConfigs.has(item.productOfferingId));
+  return firstConfiguredItem ? db.compensationConfigs.get(firstConfiguredItem.productOfferingId) : null;
+}
+
+export function setCompensationConfig(db, offeringId, body = {}) {
+  getProductOffering(db, offeringId);
+  assertEnum(body.compensationType, COMPENSATION_TYPES, "compensationType");
+  if (body.compensationType === "retry") {
+    assertRequired(body.maxRetries, "maxRetries");
+  }
+  const timestamp = nowIso();
+  if (!db.compensationConfigs) db.compensationConfigs = new Map();
+  const existing = db.compensationConfigs.get(offeringId);
+  const config = {
+    id: existing?.id || randomUUID(),
+    productOfferingId: offeringId,
+    compensationType: body.compensationType,
+    maxRetries: body.compensationType === "retry" ? Number(body.maxRetries) : null,
+    retryIntervalSeconds: body.compensationType === "retry" ? Number(body.retryIntervalSeconds || 0) : null,
+    createdAt: existing?.createdAt || timestamp,
+    updatedAt: timestamp
+  };
+  db.compensationConfigs.set(offeringId, config);
+  return config;
+}
+
+export function getCompensationConfig(db, offeringId) {
+  getProductOffering(db, offeringId);
+  const config = db.compensationConfigs?.get(offeringId);
+  if (!config) fail(404, "COMPENSATION_CONFIG_NOT_FOUND", "CompensationConfig was not found.", "productOfferingId");
+  return config;
+}
+
+function recordCompensation(db, order, compensationType, status, requestPayload = {}, responsePayload = {}, failureReason = null) {
+  if (!db.compensationRecords) db.compensationRecords = new Map();
+  const attemptNumber = [...db.compensationRecords.values()].filter((item) => item.orderId === order.id && item.compensationType === compensationType).length + 1;
+  const record = {
+    id: randomUUID(),
+    orderId: order.id,
+    compensationType,
+    attemptNumber,
+    status,
+    requestPayload,
+    responsePayload,
+    executedAt: nowIso(),
+    failureReason
+  };
+  db.compensationRecords.set(record.id, record);
+  order.compensationRecords = [...(order.compensationRecords || []), record];
+  return record;
+}
+
+export function listCompensationRecords(db, query = {}) {
+  return [...(db.compensationRecords || new Map()).values()]
+    .filter((item) => !query.orderId || item.orderId === query.orderId)
+    .filter((item) => !query.compensationType || item.compensationType === query.compensationType);
+}
+
+function recordNotification(db, eventType, order, payload = {}) {
+  if (!db.notificationEvents) db.notificationEvents = new Map();
+  const notification = {
+    id: randomUUID(),
+    eventType,
+    orderId: order.id,
+    subscriberId: order.subscriberId,
+    channelId: order.channelId,
+    payload,
+    status: "pending",
+    createdAt: nowIso()
+  };
+  db.notificationEvents.set(notification.id, notification);
+  order.notificationEvents = [...(order.notificationEvents || []), notification];
+  return notification;
+}
+
+export function listNotificationEvents(db, query = {}) {
+  return [...(db.notificationEvents || new Map()).values()]
+    .filter((item) => !query.orderId || item.orderId === query.orderId)
+    .filter((item) => !query.eventType || item.eventType === query.eventType);
+}
+
 function uniqueReasonCodes(reasonCodes) {
   return [...new Set(reasonCodes)];
 }
@@ -627,6 +726,19 @@ export function validateProductOrder(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "acknowledged") {
     fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to inProgress.`, "status");
+  }
+  if (order.orderType === "terminate") {
+    const inventory = findInventoryForOrder(db, order.originalOrderId);
+    if (!inventory || inventory.status !== "active") {
+      order.failureReasonCode = "SUBSCRIPTION_NOT_ACTIVE";
+      order.failureMessage = "Subscription is not active.";
+      transitionProductOrder(order, "failed", "SUBSCRIPTION_NOT_ACTIVE");
+      fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
+    }
+    transitionProductOrder(order, "inProgress", "Terminate order validation passed");
+    order.validationStatus = "valid";
+    order.validatedAt = nowIso();
+    return order;
   }
   const failureReasonCodes = [];
   const subscriberAttributes = body.subscriberAttributes || body;
@@ -739,10 +851,89 @@ function failFulfillmentOrder(order, stepName, failureReason) {
   return transitionProductOrder(order, "failed", order.failureReasonCode);
 }
 
+function findInventoryForOrder(db, orderId) {
+  return [...db.productInventories.values()].find((item) => item.productOrderId === orderId || item.orderId === orderId);
+}
+
+function handleProvisionCompensation(db, order) {
+  if (order.orderType !== "provision" || order.compensationPolicy === "none") return;
+  if (order.compensationPolicy === "creditBack") {
+    const debitStep = order.fulfillmentSteps.find((step) => step.stepName === "debit" && step.status === "success");
+    if (!debitStep) return;
+    recordCompensation(
+      db,
+      order,
+      "creditBack",
+      "success",
+      {
+        subscriberId: order.subscriberId,
+        amount: debitStep.requestPayload.amount,
+        currency: debitStep.requestPayload.currency,
+        chargingSource: debitStep.requestPayload.chargingSource,
+        originalTransactionRef: order.id
+      },
+      { transactionId: randomUUID(), status: "success" }
+    );
+    recordNotification(db, "COMPENSATION_COMPLETED", order, { compensationType: "creditBack" });
+  }
+  if (order.compensationPolicy === "retry" && order.retryCount >= Number(order.maxRetries || 0)) {
+    recordNotification(db, "COMPENSATION_FAILED", order, { compensationType: "retry" });
+  }
+}
+
+function completeFailedProvisionOrder(db, order, stepName, failureReason) {
+  const failed = failFulfillmentOrder(order, stepName, failureReason);
+  handleProvisionCompensation(db, failed);
+  recordNotification(db, "ORDER_FAILED", failed, { failureReason });
+  return failed;
+}
+
+function executeTerminateOrderFulfillment(db, order, body = {}) {
+  const inventory = findInventoryForOrder(db, order.originalOrderId);
+  if (!inventory || inventory.status !== "active") fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
+  const originalOrder = getProductOrder(db, order.originalOrderId);
+  const failedStep = body.failedStep;
+  const removeStatus = failedStep === "removeOffer" ? "failed" : "success";
+  fulfillmentStep(order, "removeOffer", removeStatus, {
+    orderId: order.id,
+    originalOrderId: order.originalOrderId,
+    subscriberId: order.subscriberId,
+    productOfferingId: inventory.productOfferingId
+  }, { removalId: randomUUID(), status: removeStatus }, removeStatus === "failed" ? "REMOVE_OFFER_FAILED" : null);
+  if (removeStatus !== "success") {
+    const failed = failFulfillmentOrder(order, "removeOffer", "REMOVE_OFFER_FAILED");
+    recordNotification(db, "ORDER_FAILED", failed, {});
+    return failed;
+  }
+  const neaRequired = originalOrder.items.some((item) => offeringCharacteristicValue(db, item.productOfferingId, "neaActivationRequired")?.value === "true");
+  const deactivationStatus = !neaRequired ? "skipped" : failedStep === "neaDeactivation" ? "failed" : "success";
+  fulfillmentStep(order, "neaDeactivation", deactivationStatus, {
+    orderId: order.id,
+    subscriberId: order.subscriberId
+  }, deactivationStatus === "skipped" ? { status: "skipped", reason: "NEA_DEACTIVATION_NOT_REQUIRED" } : { deactivationId: randomUUID(), status: deactivationStatus }, deactivationStatus === "failed" ? "NEA_DEACTIVATION_FAILED" : null);
+  if (deactivationStatus === "failed") {
+    const failed = failFulfillmentOrder(order, "neaDeactivation", "NEA_DEACTIVATION_FAILED");
+    recordNotification(db, "ORDER_FAILED", failed, {});
+    return failed;
+  }
+  for (const item of order.items) {
+    item.status = "completed";
+    item.fulfillmentStatus = "completed";
+  }
+  order.completedAt = nowIso();
+  const completed = transitionProductOrder(order, "completed", "Subscription terminated");
+  inventory.status = "terminated";
+  inventory.terminatedAt = completed.completedAt;
+  inventory.updatedAt = completed.completedAt;
+  recordNotification(db, "ORDER_CANCELLED", completed, { inventoryId: inventory.id, originalOrderId: order.originalOrderId });
+  return completed;
+}
+
 export function executeProductOrderFulfillment(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "inProgress") fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to completed.`, "status");
   if (order.validationStatus !== "valid" || !order.validatedAt) fail(409, "ORDER_NOT_VALIDATED", "ProductOrder must be validated before fulfillment.", "status");
+  if (order.orderType === "terminate") return executeTerminateOrderFulfillment(db, order, body);
 
   const failedStep = body.failedStep;
   const debitStatus = body.chargingResult === "failed" || failedStep === "debit" ? "failed" : "success";
@@ -758,7 +949,7 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   if (debitStatus !== "success") {
     order.fulfillment.chargingStatus = "failed";
     order.fulfillment.provisioningStatus = "pending";
-    return failFulfillmentOrder(order, "debit", debitFailureReason);
+    return completeFailedProvisionOrder(db, order, "debit", debitFailureReason);
   }
   order.fulfillment.chargingStatus = "completed";
 
@@ -774,7 +965,7 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   );
   if (attachStatus !== "success") {
     order.fulfillment.provisioningStatus = "failed";
-    return failFulfillmentOrder(order, "attachOffer", attachFailureReason);
+    return completeFailedProvisionOrder(db, order, "attachOffer", attachFailureReason);
   }
 
   const neaRequired = order.items.some((item) => offeringCharacteristicValue(db, item.productOfferingId, "neaActivationRequired")?.value === "true");
@@ -793,7 +984,7 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
       order.fulfillment.provisioningStatus = "completed";
     } else {
     order.fulfillment.provisioningStatus = "failed";
-      return failFulfillmentOrder(order, "neaActivation", neaFailureReason);
+      return completeFailedProvisionOrder(db, order, "neaActivation", neaFailureReason);
     }
   }
 
@@ -808,6 +999,7 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   order.completedAt = nowIso();
   const completed = transitionProductOrder(order, "completed", "Charging and provisioning completed");
   createProductInventoryRecordsForOrder(db, completed);
+  recordNotification(db, "ORDER_COMPLETED", completed, {});
   return completed;
 }
 
@@ -829,10 +1021,13 @@ export function cancelProductOrder(db, orderId, body = {}) {
 export function compensateProductOrder(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "failed") fail(409, "ORDER_NOT_COMPENSATABLE", "Only failed ProductOrders can be compensated.", "status");
+  if (order.compensationPolicy === "none" && !body.action) fail(409, "COMPENSATION_NOT_CONFIGURED", "Compensation is not configured for this order.", "compensationPolicy");
   const timestamp = nowIso();
+  const action = body.action || order.compensationPolicy || "creditBack";
+  const record = recordCompensation(db, order, action === "retry" ? "retry" : "creditBack", "success", { orderId }, { status: "success" });
   const compensation = {
-    id: randomUUID(),
-    action: body.action || "creditBack",
+    id: record.id,
+    action,
     status: "completed",
     reasonCode: body.reasonCode || order.fulfillment.failureReasonCode || "ORDER_FAILED",
     createdAt: timestamp
@@ -840,13 +1035,20 @@ export function compensateProductOrder(db, orderId, body = {}) {
   order.compensation = compensation;
   order.updatedAt = timestamp;
   order.stateHistory.push({ id: randomUUID(), eventType: "OrderStateChangeEvent", status: order.status, changedAt: timestamp, reason: `Compensation completed: ${compensation.action}` });
+  recordNotification(db, "COMPENSATION_COMPLETED", order, { compensationType: record.compensationType });
   return order;
 }
 
 export function retryProductOrderFulfillment(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "failed") fail(409, "ORDER_NOT_RETRYABLE", "Only failed ProductOrders can be retried.", "status");
+  if (order.maxRetries !== null && order.maxRetries !== undefined && order.retryCount >= order.maxRetries) {
+    recordNotification(db, "COMPENSATION_FAILED", order, { compensationType: "retry" });
+    fail(409, "MAX_RETRIES_EXHAUSTED", "Maximum retry attempts are exhausted.", "retryCount");
+  }
   const timestamp = nowIso();
+  order.retryCount = Number(order.retryCount || 0) + 1;
+  recordCompensation(db, order, "retry", "success", { orderId, attemptNumber: order.retryCount }, { status: "scheduled" });
   order.status = "inProgress";
   order.validationStatus = "pending";
   order.validationReasonCode = null;
@@ -870,13 +1072,18 @@ export function retryProductOrderFulfillment(db, orderId, body = {}) {
 }
 
 function createProductInventoryRecordsForOrder(db, order) {
+  if (order.orderType !== "provision") return;
   for (const item of order.items) {
     const exists = [...db.productInventories.values()].some((inventory) => inventory.orderItemId === item.id);
     if (exists) continue;
     const timestamp = nowIso();
+    const startDate = (order.completedAt || timestamp).slice(0, 10);
+    const endDateIso = inventoryExpiryForOffering(db, item.productOfferingId);
+    const debitStep = order.fulfillmentSteps.find((step) => step.stepName === "debit" && step.status === "success");
     const inventory = {
       id: randomUUID(),
       productOrderId: order.id,
+      orderId: order.id,
       orderItemId: item.id,
       subscriberId: item.beneficiaryId || order.subscriberId,
       sponsorId: item.beneficiaryId ? order.subscriberId : undefined,
@@ -884,8 +1091,17 @@ function createProductInventoryRecordsForOrder(db, order) {
       productOfferingId: item.productOfferingId,
       quantity: item.quantity,
       status: "active",
+      startDate,
+      endDate: endDateIso?.slice(0, 10),
+      renewalEnabled: item.purchasePolicy === "auto-renewal",
+      chargingSource: debitStep?.requestPayload?.chargingSource || "MA",
+      daId: debitStep?.requestPayload?.daId || null,
+      amountCharged: item.pricedAmount,
+      currency: item.pricedCurrency || order.currency,
+      beneficiaryId: item.beneficiaryId || null,
       activatedAt: timestamp,
-      expiresAt: inventoryExpiryForOffering(db, item.productOfferingId),
+      expiresAt: endDateIso,
+      terminatedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp
     };
@@ -897,7 +1113,20 @@ export function listProductInventory(db, query = {}) {
   return [...db.productInventories.values()]
     .filter((item) => !query.subscriberId || item.subscriberId === query.subscriberId)
     .filter((item) => !query.status || item.status === query.status)
-    .filter((item) => !query.productOfferingId || item.productOfferingId === query.productOfferingId);
+    .filter((item) => !query.productOfferingId || item.productOfferingId === query.productOfferingId)
+    .filter((item) => !query.from || (item.startDate || item.activatedAt?.slice(0, 10)) >= query.from)
+    .filter((item) => !query.to || (item.endDate || item.expiresAt?.slice(0, 10) || "") <= query.to)
+    .sort((a, b) => String(b.startDate || b.activatedAt || "").localeCompare(String(a.startDate || a.activatedAt || "")));
+}
+
+export function updateProductInventoryStatus(db, inventoryId, body = {}) {
+  const inventory = getProductInventory(db, inventoryId);
+  assertRequired(body.status, "status");
+  if (!["active", "suspended", "terminated"].includes(body.status)) fail(422, "INVALID_INVENTORY_STATUS", "Inventory status is invalid.", "status");
+  inventory.status = body.status;
+  inventory.updatedAt = nowIso();
+  if (body.status === "terminated") inventory.terminatedAt = inventory.updatedAt;
+  return inventory;
 }
 
 export function getProductInventory(db, inventoryId) {
@@ -906,18 +1135,91 @@ export function getProductInventory(db, inventoryId) {
   return inventory;
 }
 
+export function createTerminateOrder(db, originalOrderId, body = {}) {
+  const originalOrder = getProductOrder(db, originalOrderId);
+  if (originalOrder.orderType !== "provision" || originalOrder.status !== "completed") {
+    fail(409, "NO_ACTIVE_SUBSCRIPTION", "The referenced order has no active subscription that can be cancelled.", "status");
+  }
+  const inventory = findInventoryForOrder(db, originalOrderId);
+  if (!inventory || inventory.status !== "active") fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
+  const duplicate = [...db.productOrders.values()].find((order) => order.orderType === "terminate" && order.originalOrderId === originalOrderId && ["acknowledged", "inProgress"].includes(order.status));
+  if (duplicate) fail(409, "DUPLICATE_TERMINATION_REQUEST", "An in-flight terminate order already exists.", "originalOrderId");
+  const timestamp = nowIso();
+  const order = {
+    id: randomUUID(),
+    cartId: originalOrder.cartId,
+    subscriberId: body.subscriberId || originalOrder.subscriberId,
+    channelId: body.channelId || originalOrder.channelId,
+    currency: originalOrder.currency,
+    orderType: "terminate",
+    originalOrderId,
+    cancellationReasonCode: body.cancellationReasonCode,
+    compensationPolicy: null,
+    retryCount: 0,
+    maxRetries: null,
+    retryIntervalSeconds: null,
+    status: "acknowledged",
+    failureReasonCode: null,
+    failureMessage: null,
+    validationStatus: "pending",
+    validationReasonCode: null,
+    totalAmount: 0,
+    items: originalOrder.items.map((item) => ({
+      id: randomUUID(),
+      orderId: undefined,
+      cartItemId: item.cartItemId,
+      productOfferingId: item.productOfferingId,
+      quantity: item.quantity,
+      purchasePolicy: item.purchasePolicy,
+      beneficiaryId: item.beneficiaryId,
+      pricedAmount: 0,
+      pricedCurrency: originalOrder.currency,
+      amount: 0,
+      currency: originalOrder.currency,
+      status: "acknowledged",
+      fulfillmentStatus: "pending",
+      failureReasonCode: null
+    })),
+    stateHistory: [{ id: randomUUID(), eventType: "OrderStateChangeEvent", status: "acknowledged", changedAt: timestamp, reason: "Terminate order created" }],
+    fulfillment: {
+      chargingStatus: "skipped",
+      provisioningStatus: "pending",
+      failureReasonCode: null
+    },
+    fulfillmentSteps: [],
+    validatedAt: null,
+    completedAt: null,
+    createdAt: timestamp,
+    updatedAt: timestamp
+  };
+  for (const item of order.items) item.orderId = order.id;
+  db.productOrders.set(order.id, order);
+  return order;
+}
+
 export function createChannel(db, body = {}) {
   assertRequired(body.name, "name");
-  assertRequired(body.type, "type");
-  assertEnum(body.type, CHANNEL_TYPES, "type");
+  const channelType = body.channelType || body.type;
+  assertRequired(channelType, "channelType");
+  assertEnum(channelType, CHANNEL_TYPES, "channelType");
+  const channelId = body.channelId || body.name;
+  const duplicateById = [...db.channels.values()].find((channel) => (channel.channelId || channel.name) === channelId);
+  if (duplicateById) fail(409, "CHANNEL_ID_ALREADY_EXISTS", "Channel channelId must be unique.", "channelId");
   const duplicate = [...db.channels.values()].find((channel) => channel.name === body.name);
   if (duplicate) fail(409, "DUPLICATE_CHANNEL", "Channel name must be unique.", "name");
+  const rawApiKey = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
   const timestamp = nowIso();
   const channel = {
     id: randomUUID(),
+    channelId,
     name: body.name,
-    type: body.type,
+    type: channelType,
+    channelType,
     status: body.status || "active",
+    authMethod: body.authMethod || "none",
+    apiKeyHash: hashApiKey(rawApiKey),
+    allowedOfferingIds: body.allowedOfferingIds || [],
+    contactPoint: body.contactPoint,
     externalId: body.externalId,
     callbackUrl: body.callbackUrl,
     metadata: body.metadata || {},
@@ -926,29 +1228,32 @@ export function createChannel(db, body = {}) {
   };
   assertEnum(channel.status, CHANNEL_STATUSES, "status");
   db.channels.set(channel.id, channel);
-  return channel;
+  return { ...channel, apiKey: rawApiKey };
 }
 
 export function listChannels(db, query = {}) {
   return [...db.channels.values()]
     .filter((channel) => !query.type || channel.type === query.type)
+    .filter((channel) => !query.channelType || channel.channelType === query.channelType || channel.type === query.channelType)
     .filter((channel) => !query.status || channel.status === query.status);
 }
 
 export function getChannel(db, channelId) {
-  const channel = db.channels.get(channelId) || [...db.channels.values()].find((item) => item.name === channelId);
+  const channel = db.channels.get(channelId) || [...db.channels.values()].find((item) => item.name === channelId || item.channelId === channelId);
   if (!channel) fail(404, "CHANNEL_NOT_FOUND", "Channel was not found.", "channelId");
   return channel;
 }
 
 export function updateChannel(db, channelId, body = {}) {
   const channel = getChannel(db, channelId);
-  for (const field of ["name", "externalId", "callbackUrl", "metadata"]) {
+  for (const field of ["name", "externalId", "callbackUrl", "metadata", "contactPoint", "allowedOfferingIds"]) {
     if (body[field] !== undefined) channel[field] = body[field];
   }
-  if (body.type !== undefined) {
-    assertEnum(body.type, CHANNEL_TYPES, "type");
-    channel.type = body.type;
+  if (body.type !== undefined || body.channelType !== undefined) {
+    const nextType = body.channelType || body.type;
+    assertEnum(nextType, CHANNEL_TYPES, "channelType");
+    channel.type = nextType;
+    channel.channelType = nextType;
   }
   if (body.status !== undefined) {
     assertEnum(body.status, CHANNEL_STATUSES, "status");
@@ -956,6 +1261,22 @@ export function updateChannel(db, channelId, body = {}) {
   }
   channel.updatedAt = nowIso();
   return channel;
+}
+
+export function activateChannel(db, channelId) {
+  return updateChannel(db, channelId, { status: "active" });
+}
+
+export function deactivateChannel(db, channelId) {
+  return updateChannel(db, channelId, { status: "inactive" });
+}
+
+export function regenerateChannelApiKey(db, channelId) {
+  const channel = getChannel(db, channelId);
+  const rawApiKey = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+  channel.apiKeyHash = hashApiKey(rawApiKey);
+  channel.updatedAt = nowIso();
+  return { channelId: channel.channelId || channel.name, apiKey: rawApiKey };
 }
 
 function ensureChannelReady(db, channelId, expectedType = undefined) {

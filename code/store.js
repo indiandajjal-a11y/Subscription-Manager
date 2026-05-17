@@ -8,6 +8,9 @@ export function createStore() {
     productInventories: new Map(),
     channels: new Map(),
     channelInteractions: new Map(),
+    compensationConfigs: new Map(),
+    compensationRecords: new Map(),
+    notificationEvents: new Map(),
     // Sprint 4 additions
     subscriberAccounts: new Map(),
     channelAuthTokens: new Map(),

@@ -1,6 +1,7 @@
 import { ApiError, errorBody, fail } from "./errors.js";
 import {
   abandonShoppingCart,
+  activateChannel,
   activateProductOffering,
   activateProductSpecification,
   addCartItem,
@@ -16,9 +17,12 @@ import {
   createProductOffering,
   createProductSpecification,
   createShoppingCart,
+  createTerminateOrder,
+  deactivateChannel,
   deleteEligibilityRule,
   deleteProductOfferingPrice,
   getProductOffering,
+  getCompensationConfig,
   getProductInventory,
   getProductOrder,
   getProductSpecification,
@@ -26,6 +30,8 @@ import {
   getChannel,
   listChannelInteractions,
   listChannels,
+  listCompensationRecords,
+  listNotificationEvents,
   listProductInventory,
   listProductOfferings,
   listProductOrders,
@@ -34,7 +40,10 @@ import {
   retireProductOffering,
   retireProductSpecification,
   retryProductOrderFulfillment,
+  regenerateChannelApiKey,
+  setCompensationConfig,
   updateChannel,
+  updateProductInventoryStatus,
   updateProductOrderState,
   updateProductOffering,
   updateProductSpecification,
@@ -157,6 +166,14 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         const result = retireProductOffering(db, params.id);
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
+      }
+      if ((params = is(method, "POST", pathname, "/api/v1/catalog/offerings/:id/compensation-config"))) {
+        const result = setCompensationConfig(db, params.id, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if ((params = is(method, "GET", pathname, "/api/v1/catalog/offerings/:id/compensation-config"))) {
+        return send(res, 200, getCompensationConfig(db, params.id));
       }
       if ((params = is(method, "POST", pathname, "/api/v1/catalog/offerings/:id/prices"))) {
         const result = addProductOfferingPrice(db, params.id, await readJson(req));
@@ -299,12 +316,28 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
       }
+      if ((params = is(method, "POST", pathname, "/api/v1/orders/:orderId/cancel-request"))) {
+        const result = createTerminateOrder(db, params.orderId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, { terminateOrderId: result.id, originalOrderId: result.originalOrderId, status: result.status });
+      }
 
       if (method === "GET" && pathname === "/api/v1/inventory") {
         return send(res, 200, listProductInventory(db, query));
       }
       if ((params = is(method, "GET", pathname, "/api/v1/inventory/:inventoryId"))) {
         return send(res, 200, getProductInventory(db, params.inventoryId));
+      }
+      if ((params = is(method, "PATCH", pathname, "/api/v1/inventory/:inventoryId/status"))) {
+        const result = updateProductInventoryStatus(db, params.inventoryId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/compensation-records") {
+        return send(res, 200, listCompensationRecords(db, query));
+      }
+      if (method === "GET" && pathname === "/api/v1/notification-events") {
+        return send(res, 200, listNotificationEvents(db, query));
       }
 
       if (method === "POST" && pathname === "/api/v1/channels") {
@@ -320,6 +353,21 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       }
       if ((params = is(method, "PATCH", pathname, "/api/v1/channels/:channelId"))) {
         const result = updateChannel(db, params.channelId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if ((params = is(method, "POST", pathname, "/api/v1/channels/:channelId/activate"))) {
+        const result = activateChannel(db, params.channelId);
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if ((params = is(method, "POST", pathname, "/api/v1/channels/:channelId/deactivate"))) {
+        const result = deactivateChannel(db, params.channelId);
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if ((params = is(method, "POST", pathname, "/api/v1/channels/:channelId/regenerate-key"))) {
+        const result = regenerateChannelApiKey(db, params.channelId);
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
       }

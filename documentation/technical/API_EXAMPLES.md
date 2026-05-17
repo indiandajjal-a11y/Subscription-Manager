@@ -220,12 +220,38 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/
 }'
 ```
 
+Create or update compensation config for an offering:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings/{offeringId}/compensation-config" -ContentType "application/json" -Body '{
+  "compensationType": "creditBack"
+}'
+```
+
+Create a terminate order for a completed provision order:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderId}/cancel-request" -ContentType "application/json" -Body '{
+  "subscriberId": "2348012345678",
+  "channelId": "CRM",
+  "cancellationReasonCode": "SUBSCRIBER_REQUEST"
+}'
+```
+
+Validate and fulfill the returned `terminateOrderId` through the same `/orders/{orderId}/validate` and `/orders/{orderId}/fulfill` endpoints. Completion updates the linked inventory record to `terminated` and writes an `ORDER_CANCELLED` notification event.
+
 ## ProductInventory
 
 Query inventory by subscriber:
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/inventory?subscriberId=2348012345678"
+```
+
+Filter inventory by status and date:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/inventory?subscriberId=2348012345678&status=active&from=2026-01-01&to=2026-12-31"
 ```
 
 Get one inventory record:
@@ -240,11 +266,18 @@ Create a USSD channel:
 
 ```powershell
 Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/channels" -ContentType "application/json" -Body '{
+  "channelId": "USSD",
   "name": "USSD",
-  "type": "USSD",
-  "externalId": "ussd-gateway-01"
+  "channelType": "USSD",
+  "authMethod": "apiKey",
+  "contactPoint": "*123#",
+  "metadata": {
+    "shortCode": "123"
+  }
 }'
 ```
+
+The response includes a plaintext `apiKey` once. Subsequent cart creation validates `channelId` against registered active channels when any channels are configured.
 
 Capture a USSD pull subscription request:
 

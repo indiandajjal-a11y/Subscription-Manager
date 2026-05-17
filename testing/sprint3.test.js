@@ -7,6 +7,7 @@ import {
   activateProductSpecification,
   addCartItem,
   addProductOfferingPrice,
+  createTerminateOrder,
   captureChannelSubscriptionRequest,
   compensateProductOrder,
   createChannel,
@@ -16,12 +17,17 @@ import {
   createShoppingCart,
   executeProductOrderFulfillment,
   getChannel,
+  getCompensationConfig,
   getProductInventory,
+  listCompensationRecords,
   listChannelInteractions,
   listChannels,
+  listNotificationEvents,
   listProductInventory,
   retryProductOrderFulfillment,
+  setCompensationConfig,
   updateChannel,
+  updateProductInventoryStatus,
   validateProductOrder,
   validateShoppingCart
 } from "../code/domain.js";
@@ -80,7 +86,11 @@ test("Sprint 3 creates ProductInventory records when an order completes", () => 
 
   assert.equal(inventory.length, 1);
   assert.equal(inventory[0].productOrderId, order.id);
+  assert.equal(inventory[0].orderId, order.id);
   assert.equal(inventory[0].status, "active");
+  assert.equal(inventory[0].startDate, order.completedAt.slice(0, 10));
+  assert.equal(inventory[0].endDate, inventory[0].expiresAt.slice(0, 10));
+  assert.equal(inventory[0].chargingSource, "MA");
   assert.ok(inventory[0].expiresAt);
   assert.equal(getProductInventory(db, inventory[0].id).id, inventory[0].id);
 });
@@ -112,14 +122,98 @@ test("Sprint 3 compensates and retries failed ProductOrders", () => {
   assert.equal(retry.fulfillment.chargingStatus, "pending");
 });
 
+test("Sprint 3 compensation config is copied to provision orders and credit-back records are written", () => {
+  const db = createStore();
+  const offering = activeOffering(db);
+  const config = setCompensationConfig(db, offering.id, { compensationType: "creditBack" });
+  const cart = createShoppingCart(db, { channelId: "USSD", subscriberId: "2348012345678", currency: "NGN" });
+  addCartItem(db, cart.id, { productOfferingId: offering.id });
+  validateShoppingCart(db, cart.id, {});
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.equal(getCompensationConfig(db, offering.id).id, config.id);
+  assert.equal(order.compensationPolicy, "creditBack");
+  validateProductOrder(db, order.id);
+  executeProductOrderFulfillment(db, order.id, { failedStep: "attachOffer" });
+
+  assert.equal(order.status, "failed");
+  assert.equal(listCompensationRecords(db, { orderId: order.id, compensationType: "creditBack" }).length, 1);
+  assert.equal(listNotificationEvents(db, { orderId: order.id, eventType: "COMPENSATION_COMPLETED" }).length, 1);
+});
+
+test("Sprint 3 terminate order completes without mutating the original provision order", () => {
+  const db = createStore();
+  const original = completedOrder(db);
+  const originalStatus = original.status;
+  const terminate = createTerminateOrder(db, original.id, {
+    channelId: "CRM",
+    cancellationReasonCode: "SUBSCRIBER_REQUEST"
+  });
+
+  assert.equal(terminate.orderType, "terminate");
+  assert.equal(terminate.originalOrderId, original.id);
+  assert.equal(validateProductOrder(db, terminate.id).status, "inProgress");
+  const completed = executeProductOrderFulfillment(db, terminate.id, {});
+  const inventory = listProductInventory(db, { subscriberId: original.subscriberId })[0];
+
+  assert.equal(completed.status, "completed");
+  assert.equal(original.status, originalStatus);
+  assert.equal(inventory.status, "terminated");
+  assert.ok(inventory.terminatedAt);
+  assert.equal(listNotificationEvents(db, { orderId: terminate.id, eventType: "ORDER_CANCELLED" }).length, 1);
+});
+
+test("Sprint 3 blocks duplicate or inactive subscription terminate requests", () => {
+  const db = createStore();
+  const original = completedOrder(db);
+  createTerminateOrder(db, original.id, { cancellationReasonCode: "FIRST" });
+
+  assert.deepEqual(reason(() => createTerminateOrder(db, original.id, { cancellationReasonCode: "SECOND" })), {
+    status: 409,
+    reasonCode: "DUPLICATE_TERMINATION_REQUEST"
+  });
+
+  const other = completedOrder(db);
+  const inventory = listProductInventory(db, { subscriberId: other.subscriberId, status: "active" }).find((item) => item.productOrderId === other.id);
+  updateProductInventoryStatus(db, inventory.id, { status: "terminated" });
+  assert.deepEqual(reason(() => createTerminateOrder(db, other.id, { cancellationReasonCode: "SECOND" })), {
+    status: 409,
+    reasonCode: "SUBSCRIPTION_NOT_ACTIVE"
+  });
+});
+
 test("Sprint 3 manages channels and channel status", () => {
   const db = createStore();
-  const channel = createChannel(db, { name: "PartnerA", type: "THIRD_PARTY", externalId: "partner-a" });
+  const channel = createChannel(db, { name: "PartnerA", channelId: "PARTNER_A", type: "THIRD_PARTY", externalId: "partner-a" });
 
   assert.equal(getChannel(db, channel.id).name, "PartnerA");
-  assert.equal(getChannel(db, "PartnerA").id, channel.id);
+  assert.equal(getChannel(db, "PARTNER_A").id, channel.id);
+  assert.ok(channel.apiKey);
+  assert.ok(channel.apiKeyHash);
   assert.equal(listChannels(db, { type: "THIRD_PARTY" }).length, 1);
   assert.equal(updateChannel(db, channel.id, { status: "inactive" }).status, "inactive");
+});
+
+test("Sprint 3 channel registry validates carts and restricts channel offerings", () => {
+  const db = createStore();
+  const channel = createChannel(db, { name: "CRM Channel", channelId: "CRM", type: "CRM" });
+  const allowed = activeOffering(db, "CRM");
+  activeOffering(db, "CRM");
+  updateChannel(db, channel.id, { allowedOfferingIds: [allowed.id] });
+
+  assert.equal(listProductInventory(db, { subscriberId: "nobody" }).length, 0);
+  assert.equal(createShoppingCart(db, { channelId: "CRM", subscriberId: "2348012345678", currency: "NGN" }).channelId, "CRM");
+  assert.equal(listChannels(db, { channelType: "CRM" }).length, 1);
+  assert.equal(listProductInventory(db, { subscriberId: "2348012345678" }).length, 0);
+  assert.deepEqual(reason(() => createShoppingCart(db, { channelId: "UNKNOWN", subscriberId: "2348012345678", currency: "NGN" })), {
+    status: 422,
+    reasonCode: "UNKNOWN_CHANNEL"
+  });
+  updateChannel(db, "CRM", { status: "inactive" });
+  assert.deepEqual(reason(() => createShoppingCart(db, { channelId: "CRM", subscriberId: "2348012345678", currency: "NGN" })), {
+    status: 422,
+    reasonCode: "CHANNEL_INACTIVE"
+  });
 });
 
 test("Sprint 3 captures USSD pull requests and creates an order", () => {

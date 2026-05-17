@@ -6,7 +6,7 @@ Sprint 1 establishes the TMF-aligned foundation for future subscription ordering
 
 Sprint 2 extends the checkout stub into a ProductOrder lifecycle foundation with validation, state transitions, fulfillment stubs, and cancellation.
 
-Sprint 3 adds ProductInventory creation, compensation/retry hooks, and channel integration entry points.
+Sprint 3 adds ProductInventory creation, compensation/retry hooks, channel integration entry points, terminate-order cancellation, compensation configuration, and notification event placeholders.
 
 Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for live CS validation, and CS-ready account/order validation contracts.
 
@@ -31,7 +31,7 @@ Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for li
 - Owns TMF entity lifecycle behavior
 - Performs pricing, eligibility, cart expiry, checkout, and validation logic
 - Owns Sprint 2 ProductOrder state transitions and fulfillment stub logic
-- Owns Sprint 3 inventory creation, compensation, retry, and channel capture logic
+- Owns Sprint 3 inventory creation, compensation config/records, retry, terminate orders, notification events, and channel capture logic
 - Owns Sprint 4 auth token, API key, SubscriberAccount snapshot, and live-account order validation logic
 
 `code/sprint4.js`
@@ -89,11 +89,20 @@ Sprint 3 adds:
 
 - `POST /api/v1/product-order/:orderId/compensate`
 - `POST /api/v1/product-order/:orderId/retry`
+- `POST /api/v1/orders/:orderId/cancel-request`
+- `POST /api/v1/catalog/offerings/:id/compensation-config`
+- `GET /api/v1/catalog/offerings/:id/compensation-config`
 - `GET /api/v1/inventory`
 - `GET /api/v1/inventory/:inventoryId`
+- `PATCH /api/v1/inventory/:inventoryId/status`
+- `GET /api/v1/compensation-records`
+- `GET /api/v1/notification-events`
 - `POST /api/v1/channels`
 - `GET /api/v1/channels`
 - `PATCH /api/v1/channels/:channelId`
+- `POST /api/v1/channels/:channelId/activate`
+- `POST /api/v1/channels/:channelId/deactivate`
+- `POST /api/v1/channels/:channelId/regenerate-key`
 - channel-specific request capture routes for USSD, SMS, and CRM
 
 Sprint 4 domain support adds:
@@ -119,7 +128,7 @@ Sprint 4 domain support adds:
 
 `testing/sprint3.test.js`
 
-- Inventory creation, compensation, retry, and channel request tests
+- Inventory creation, compensation config/records, retry, terminate order, notification event, and channel request tests
 
 `testing/sprint4.test.js`
 
