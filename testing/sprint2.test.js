@@ -1,0 +1,196 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { createStore } from "../code/store.js";
+import {
+  activateProductOffering,
+  activateProductSpecification,
+  addCartItem,
+  addProductOfferingPrice,
+  cancelProductOrder,
+  captureProductOrderFromCart,
+  checkoutShoppingCart,
+  createProductOffering,
+  createProductSpecification,
+  createShoppingCart,
+  executeProductOrderFulfillment,
+  getProductOrder,
+  listProductOrders,
+  updateProductOrderState,
+  validateProductOrder,
+  validateShoppingCart
+} from "../code/domain.js";
+
+const characteristics = [
+  { name: "dataVolume", valueType: "number", value: "5", unit: "GB" },
+  { name: "validityPeriod", valueType: "number", value: "30", unit: "days" },
+  { name: "bundleType", valueType: "string", value: "monthly" },
+  { name: "neaActivationRequired", valueType: "boolean", value: "true" }
+];
+
+function reason(fn) {
+  try {
+    fn();
+  } catch (error) {
+    return { status: error.status, reasonCode: error.reasonCode };
+  }
+  assert.fail("Expected function to throw");
+}
+
+function createValidatedCart(db) {
+  const spec = activateProductSpecification(db, createProductSpecification(db, {
+    name: `Sprint 2 Spec ${randomUUID()}`,
+    version: "1.0",
+    characteristics
+  }).id);
+  const offering = createProductOffering(db, {
+    name: `Sprint 2 Offering ${randomUUID()}`,
+    productSpecificationId: spec.id,
+    channelAvailability: ["USSD"]
+  });
+  addProductOfferingPrice(db, offering.id, {
+    priceType: "standard",
+    amount: 250,
+    currency: "NGN",
+    chargingSource: "MA",
+    isDefault: true
+  });
+  activateProductOffering(db, offering.id);
+
+  const cart = createShoppingCart(db, { channelId: "USSD", subscriberId: "2348012345678", currency: "NGN" });
+  addCartItem(db, cart.id, { productOfferingId: offering.id, quantity: 2, purchasePolicy: "one-off" });
+  validateShoppingCart(db, cart.id, { subscriberAttributes: { serviceClass: "PREPAID" } });
+  return { cart, offering };
+}
+
+test("Sprint 2 checkout creates a ProductOrder with item snapshot and totals", () => {
+  const db = createStore();
+  const { cart, offering } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.equal(order.status, "acknowledged");
+  assert.equal(order.cartId, cart.id);
+  assert.equal(order.totalAmount, 500);
+  assert.equal(order.currency, "NGN");
+  assert.equal(order.orderType, "provision");
+  assert.equal(order.failureReasonCode, null);
+  assert.equal(order.fulfillmentSteps.length, 0);
+  assert.equal(order.items.length, 1);
+  assert.equal(order.items[0].productOfferingId, offering.id);
+  assert.equal(order.items[0].pricedAmount, 500);
+  assert.equal(order.items[0].pricedCurrency, "NGN");
+  assert.equal(order.items[0].amount, 500);
+  assert.equal(order.stateHistory[0].eventType, "OrderStateChangeEvent");
+});
+
+test("Sprint 2 captures ProductOrder from cart through official POST style", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = captureProductOrderFromCart(db, { cartId: cart.id });
+
+  assert.equal(order.cartId, cart.id);
+  assert.equal(order.status, "acknowledged");
+});
+
+test("Sprint 2 prevents duplicate active orders for the same cart", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  checkoutShoppingCart(db, cart.id);
+  assert.deepEqual(reason(() => checkoutShoppingCart(db, cart.id)), {
+    status: 409,
+    reasonCode: "CART_CLOSED"
+  });
+});
+
+test("Sprint 2 can list and retrieve product orders", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.equal(getProductOrder(db, order.id).id, order.id);
+  assert.equal(listProductOrders(db, { subscriberId: "2348012345678" }).length, 1);
+  assert.equal(listProductOrders(db, { status: "acknowledged" })[0].id, order.id);
+});
+
+test("Sprint 2 validates ProductOrder before fulfillment", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  const validated = validateProductOrder(db, order.id);
+  assert.equal(validated.validationStatus, "valid");
+  assert.equal(validated.validationReasonCode, null);
+  assert.equal(validated.status, "inProgress");
+  assert.ok(validated.validatedAt);
+  assert.equal(validated.validationResult.overallValid, true);
+});
+
+test("Sprint 2 stores failed OrderValidationResult details", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.deepEqual(reason(() => validateProductOrder(db, order.id, { balanceSufficient: false })), {
+    status: 422,
+    reasonCode: "INSUFFICIENT_BALANCE"
+  });
+  assert.equal(order.validationResult.overallValid, false);
+  assert.equal(order.validationResult.balanceSufficient, false);
+});
+
+test("Sprint 2 enforces allowed ProductOrder state transitions", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.deepEqual(reason(() => updateProductOrderState(db, order.id, { status: "completed" })), {
+    status: 409,
+    reasonCode: "INVALID_ORDER_STATE_TRANSITION"
+  });
+
+  assert.equal(updateProductOrderState(db, order.id, { status: "inProgress", reason: "Accepted for fulfillment" }).status, "inProgress");
+  assert.equal(updateProductOrderState(db, order.id, { status: "completed", reason: "Fulfilled" }).status, "completed");
+});
+
+test("Sprint 2 fulfillment completes charging and provisioning", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+  validateProductOrder(db, order.id);
+
+  const fulfilled = executeProductOrderFulfillment(db, order.id, {});
+  assert.equal(fulfilled.status, "completed");
+  assert.equal(fulfilled.fulfillment.chargingStatus, "completed");
+  assert.equal(fulfilled.fulfillment.provisioningStatus, "completed");
+  assert.equal(fulfilled.items[0].fulfillmentStatus, "completed");
+  assert.equal(fulfilled.fulfillmentSteps.map((step) => step.stepName).join(","), "debit,attachOffer,neaActivation");
+  assert.equal(fulfilled.fulfillmentSteps.every((step) => step.status === "success"), true);
+});
+
+test("Sprint 2 fulfillment can fail on charging", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db);
+  const order = checkoutShoppingCart(db, cart.id);
+  validateProductOrder(db, order.id);
+
+  const failed = executeProductOrderFulfillment(db, order.id, {
+    chargingResult: "failed",
+    failureReasonCode: "INSUFFICIENT_BALANCE"
+  });
+  assert.equal(failed.status, "failed");
+  assert.equal(failed.fulfillment.failureReasonCode, "INSUFFICIENT_BALANCE");
+});
+
+test("Sprint 2 cancellation is allowed before completion and blocked after completion", () => {
+  const db = createStore();
+  const first = checkoutShoppingCart(db, createValidatedCart(db).cart.id);
+  assert.equal(cancelProductOrder(db, first.id, { reason: "Customer request" }).status, "cancelled");
+
+  const second = checkoutShoppingCart(db, createValidatedCart(db).cart.id);
+  validateProductOrder(db, second.id);
+  executeProductOrderFulfillment(db, second.id, {});
+  assert.deepEqual(reason(() => cancelProductOrder(db, second.id, { reason: "Too late" })), {
+    status: 409,
+    reasonCode: "ORDER_CANNOT_BE_CANCELLED"
+  });
+});

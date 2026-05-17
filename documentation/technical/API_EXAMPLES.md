@@ -1,0 +1,257 @@
+# Sprint 1 API Examples
+
+Base URL: `http://localhost:3000/api/v1`
+
+All validation failures use this envelope:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Human-readable summary",
+    "details": [
+      {
+        "field": "currency",
+        "reasonCode": "UNSUPPORTED_CURRENCY",
+        "message": "Cart currency is not supported."
+      }
+    ]
+  }
+}
+```
+
+## ProductSpecification
+
+Create a specification:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/specifications" -ContentType "application/json" -Body '{
+  "name": "Monthly 5GB Data",
+  "version": "1.0",
+  "description": "Monthly data bundle",
+  "characteristics": [
+    { "name": "dataVolume", "valueType": "number", "value": "5", "unit": "GB" },
+    { "name": "validityPeriod", "valueType": "number", "value": "30", "unit": "days" },
+    { "name": "bundleType", "valueType": "string", "value": "monthly" },
+    { "name": "neaActivationRequired", "valueType": "boolean", "value": "true" }
+  ]
+}'
+```
+
+Activate a specification:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/specifications/{specificationId}/activate"
+```
+
+## ProductOffering
+
+Create an offering:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings" -ContentType "application/json" -Body '{
+  "name": "Monthly 5GB - USSD",
+  "productSpecificationId": "{specificationId}",
+  "channelAvailability": ["USSD"]
+}'
+```
+
+Add a default price:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings/{offeringId}/prices" -ContentType "application/json" -Body '{
+  "priceType": "standard",
+  "amount": 1000,
+  "currency": "NGN",
+  "chargingSource": "MA",
+  "isDefault": true
+}'
+```
+
+Activate an offering:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings/{offeringId}/activate"
+```
+
+List channel-visible offerings:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/catalog/offerings?status=active&channelId=USSD"
+```
+
+## ShoppingCart
+
+Create a cart:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart" -ContentType "application/json" -Body '{
+  "channelId": "USSD",
+  "subscriberId": "2348012345678",
+  "currency": "NGN"
+}'
+```
+
+Add an item:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/items" -ContentType "application/json" -Body '{
+  "productOfferingId": "{offeringId}",
+  "quantity": 1,
+  "purchasePolicy": "one-off"
+}'
+```
+
+Validate and price the cart:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/validate" -ContentType "application/json" -Body '{
+  "subscriberAttributes": {
+    "serviceClass": "PREPAID",
+    "segment": "RETAIL"
+  }
+}'
+```
+
+Checkout:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/checkout"
+```
+
+## ProductOrder
+
+Get an order:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/product-order/{orderId}"
+```
+
+Capture an order from an already validated cart:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders" -ContentType "application/json" -Body '{
+  "cartId": "{cartId}"
+}'
+```
+
+List orders:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/product-order?subscriberId=2348012345678"
+```
+
+Validate an order before fulfillment:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderId}/validate" -ContentType "application/json" -Body '{
+  "subscriberEligible": true,
+  "balanceSufficient": true
+}'
+```
+
+Move an order to `inProgress`:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/{orderId}/state" -ContentType "application/json" -Body '{
+  "status": "inProgress",
+  "reason": "Accepted for fulfillment"
+}'
+```
+
+Execute successful fulfillment:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderId}/fulfill" -ContentType "application/json" -Body '{}'
+```
+
+Simulate charging failure:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/{orderId}/fulfill" -ContentType "application/json" -Body '{
+  "chargingResult": "failed",
+  "failureReasonCode": "INSUFFICIENT_BALANCE"
+}'
+```
+
+Cancel an order:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/{orderId}/cancel" -ContentType "application/json" -Body '{
+  "reason": "Customer request"
+}'
+```
+
+Compensate a failed order:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/{orderId}/compensate" -ContentType "application/json" -Body '{
+  "action": "creditBack",
+  "reasonCode": "PROVISIONING_FAILED"
+}'
+```
+
+Retry a failed order:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/{orderId}/retry" -ContentType "application/json" -Body '{
+  "reason": "Retry after compensation"
+}'
+```
+
+## ProductInventory
+
+Query inventory by subscriber:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/inventory?subscriberId=2348012345678"
+```
+
+Get one inventory record:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/inventory/{inventoryId}"
+```
+
+## Channels
+
+Create a USSD channel:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/channels" -ContentType "application/json" -Body '{
+  "name": "USSD",
+  "type": "USSD",
+  "externalId": "ussd-gateway-01"
+}'
+```
+
+Capture a USSD pull subscription request:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/channels/{channelId}/ussd/pull" -ContentType "application/json" -Body '{
+  "subscriberId": "2348012345678",
+  "productOfferingId": "{offeringId}",
+  "currency": "NGN",
+  "subscriberAttributes": {
+    "serviceClass": "PREPAID"
+  },
+  "autoCheckout": true
+}'
+```
+
+Capture an SMS subscription request:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/channels/{channelId}/sms/messages" -ContentType "application/json" -Body '{
+  "subscriberId": "2348012345678",
+  "productOfferingId": "{offeringId}",
+  "currency": "NGN",
+  "autoCheckout": true
+}'
+```
+
+List channel interactions:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/channel-interactions?subscriberId=2348012345678"
+```
