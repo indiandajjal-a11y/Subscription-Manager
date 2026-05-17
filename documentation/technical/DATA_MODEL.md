@@ -126,6 +126,8 @@ Key fields:
 
 Stored when ProductOrder validation is attempted.
 
+Any failed validation attempt transitions the related `ProductOrder` to `failed`, sets `completedAt`, and stores all unique failure reason codes.
+
 Key fields:
 
 - `orderId`
@@ -153,6 +155,8 @@ Statuses:
 - `success`
 - `failed`
 - `skipped`
+
+`neaActivation` is recorded as `skipped` when the related ProductSpecification has `neaActivationRequired = false`.
 
 ## ProductInventory
 
@@ -191,6 +195,7 @@ Supported types:
 - `MOBILE_APP`
 - `THIRD_PARTY`
 - `SELF_CARE`
+- `API_PARTNER`
 
 Statuses:
 
@@ -212,3 +217,33 @@ Key fields:
 - `orderId`
 - `status`
 - `reasonCode`
+
+## SubscriberAccount
+
+Sprint 4 stores CS-derived subscriber attributes per order.
+
+Key fields:
+
+- `orderId`
+- `subscriberId`
+- `serviceClass`
+- `segment`
+- `mainBalance`
+- `currency`
+- `daBalances`
+- `psoFlags`
+- `offerIds`
+- `csRawResponse`
+
+## ChannelAuthToken
+
+Stores issued channel token metadata for audit and revocation.
+
+Key fields:
+
+- `channelId`
+- `tokenHash`
+- `issuedAt`
+- `expiresAt`
+- `revokedAt`
+- `lastUsedAt`

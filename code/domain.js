@@ -428,10 +428,14 @@ function characteristicValue(specification, name) {
   return specification?.characteristics.find((item) => item.name === name);
 }
 
-function inventoryExpiryForOffering(db, offeringId) {
+function offeringCharacteristicValue(db, offeringId, name) {
   const offering = db.productOfferings.get(offeringId);
   const specification = offering ? db.productSpecifications.get(offering.productSpecificationId) : undefined;
-  const validity = characteristicValue(specification, "validityPeriod");
+  return characteristicValue(specification, name);
+}
+
+function inventoryExpiryForOffering(db, offeringId) {
+  const validity = offeringCharacteristicValue(db, offeringId, "validityPeriod");
   if (!validity || validity.unit !== "days") return undefined;
   const expiresAt = new Date(Date.now() + Number(validity.value) * 24 * 60 * 60 * 1000);
   return expiresAt.toISOString();
@@ -615,6 +619,10 @@ function recordOrderValidationResult(db, order, result) {
   return validation;
 }
 
+function uniqueReasonCodes(reasonCodes) {
+  return [...new Set(reasonCodes)];
+}
+
 export function validateProductOrder(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "acknowledged") {
@@ -659,9 +667,11 @@ export function validateProductOrder(db, orderId, body = {}) {
     if (balance) {
       const price = selectPrice(offering, order.currency, subscriberAttributes);
       const requiredAmount = Number(item.pricedAmount ?? ((price?.amount || 0) * item.quantity));
-      if (price?.chargingSource === "DA" && price.daId) {
-        const da = Array.isArray(balance.DA) ? balance.DA.find((candidate) => candidate.daId === price.daId) : null;
-        if (!da || Number(da.balance || 0) < requiredAmount) balanceSufficient = false;
+      if (price?.chargingSource === "DA") {
+        const daBalances = Array.isArray(balance.DA) ? balance.DA : [];
+        const matchingDaBalances = price.daId ? daBalances.filter((candidate) => candidate.daId === price.daId) : daBalances;
+        const availableDaBalance = matchingDaBalances.reduce((sum, candidate) => sum + Number(candidate.balance || 0), 0);
+        if (availableDaBalance < requiredAmount) balanceSufficient = false;
       } else if (Number(balance.MA || 0) < requiredAmount) {
         balanceSufficient = false;
       }
@@ -670,25 +680,28 @@ export function validateProductOrder(db, orderId, body = {}) {
   if (!subscriberEligible) failureReasonCodes.push("SUBSCRIBER_INELIGIBLE");
   if (!balanceSufficient) failureReasonCodes.push("INSUFFICIENT_BALANCE");
   if (!channelValid) failureReasonCodes.push("CHANNEL_NOT_AUTHORIZED");
+  const uniqueFailures = uniqueReasonCodes(failureReasonCodes);
 
   const validation = recordOrderValidationResult(db, order, {
     channelValid,
     subscriberEligible,
     offeringAvailable: !inactiveOfferingItem,
     balanceSufficient,
-    overallValid: failureReasonCodes.length === 0,
-    failureReasonCodes
+    overallValid: uniqueFailures.length === 0,
+    failureReasonCodes: uniqueFailures
   });
   if (!validation.overallValid) {
     order.validationStatus = "invalid";
-    order.validationReasonCode = failureReasonCodes[0];
-    order.updatedAt = validation.validatedAt;
-    if (!validation.offeringAvailable) {
-      order.failureReasonCode = "OFFERING_NO_LONGER_AVAILABLE";
-      order.failureMessage = "Order validation failed: offering no longer available.";
-      transitionProductOrder(order, "failed", "OFFERING_NO_LONGER_AVAILABLE");
+    order.validationReasonCode = uniqueFailures[0];
+    order.failureReasonCode = uniqueFailures[0];
+    order.failureMessage = `Order validation failed: ${uniqueFailures.join(", ")}.`;
+    for (const item of order.items) {
+      item.status = "failed";
+      item.failureReasonCode = item.failureReasonCode || uniqueFailures[0];
     }
-    fail(422, failureReasonCodes[0], "ProductOrder validation failed.", "validationResult");
+    order.updatedAt = validation.validatedAt;
+    transitionProductOrder(order, "failed", uniqueFailures[0]);
+    fail(422, uniqueFailures[0], "ProductOrder validation failed.", "validationResult");
   }
   order.validationStatus = "valid";
   order.validationReasonCode = null;
@@ -714,6 +727,18 @@ function fulfillmentStep(order, stepName, status, requestPayload, responsePayloa
   return step;
 }
 
+function failFulfillmentOrder(order, stepName, failureReason) {
+  order.fulfillment.failureReasonCode = failureReason;
+  order.failureReasonCode = "FULFILLMENT_STEP_FAILED";
+  order.failureMessage = `${stepName} fulfillment step failed: ${failureReason}.`;
+  for (const item of order.items) {
+    item.status = "failed";
+    item.failureReasonCode = order.failureReasonCode;
+    item.fulfillmentStatus = "failed";
+  }
+  return transitionProductOrder(order, "failed", order.failureReasonCode);
+}
+
 export function executeProductOrderFulfillment(db, orderId, body = {}) {
   const order = getProductOrder(db, orderId);
   if (order.status !== "inProgress") fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to completed.`, "status");
@@ -721,53 +746,55 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
 
   const failedStep = body.failedStep;
   const debitStatus = body.chargingResult === "failed" || failedStep === "debit" ? "failed" : "success";
-  fulfillmentStep(order, "debit", debitStatus, { orderId: order.id, amount: order.totalAmount, currency: order.currency }, { result: debitStatus }, debitStatus === "failed" ? body.failureReasonCode || "CHARGING_FAILED" : null);
+  const debitFailureReason = body.failureReasonCode || "CHARGING_FAILED";
+  fulfillmentStep(
+    order,
+    "debit",
+    debitStatus,
+    { orderId: order.id, subscriberId: order.subscriberId, amount: order.totalAmount, currency: order.currency },
+    { transactionId: randomUUID(), status: debitStatus },
+    debitStatus === "failed" ? debitFailureReason : null
+  );
   if (debitStatus !== "success") {
     order.fulfillment.chargingStatus = "failed";
     order.fulfillment.provisioningStatus = "pending";
-    order.fulfillment.failureReasonCode = body.failureReasonCode || "CHARGING_FAILED";
-    order.failureReasonCode = order.fulfillment.failureReasonCode;
-    order.failureMessage = "Debit fulfillment step failed.";
-    order.completedAt = nowIso();
-    for (const item of order.items) {
-      item.status = "failed";
-      item.failureReasonCode = order.failureReasonCode;
-      item.fulfillmentStatus = "failed";
-    }
-    return transitionProductOrder(order, "failed", order.failureReasonCode);
+    return failFulfillmentOrder(order, "debit", debitFailureReason);
   }
   order.fulfillment.chargingStatus = "completed";
 
   const attachStatus = body.attachOfferResult === "failed" || failedStep === "attachOffer" ? "failed" : "success";
-  fulfillmentStep(order, "attachOffer", attachStatus, { orderId: order.id, items: order.items.map((item) => item.productOfferingId) }, { result: attachStatus }, attachStatus === "failed" ? body.failureReasonCode || "ATTACH_OFFER_FAILED" : null);
+  const attachFailureReason = body.failureReasonCode || "ATTACH_OFFER_FAILED";
+  fulfillmentStep(
+    order,
+    "attachOffer",
+    attachStatus,
+    { orderId: order.id, subscriberId: order.subscriberId, items: order.items.map((item) => item.productOfferingId) },
+    { attachmentId: randomUUID(), status: attachStatus },
+    attachStatus === "failed" ? attachFailureReason : null
+  );
   if (attachStatus !== "success") {
     order.fulfillment.provisioningStatus = "failed";
-    order.fulfillment.failureReasonCode = body.failureReasonCode || "ATTACH_OFFER_FAILED";
-    order.failureReasonCode = order.fulfillment.failureReasonCode;
-    order.failureMessage = "Attach offer fulfillment step failed.";
-    order.completedAt = nowIso();
-    for (const item of order.items) {
-      item.status = "failed";
-      item.failureReasonCode = order.failureReasonCode;
-      item.fulfillmentStatus = "failed";
-    }
-    return transitionProductOrder(order, "failed", order.failureReasonCode);
+    return failFulfillmentOrder(order, "attachOffer", attachFailureReason);
   }
 
-  const neaStatus = body.provisioningResult === "failed" || failedStep === "neaActivation" ? "failed" : "success";
-  fulfillmentStep(order, "neaActivation", neaStatus, { orderId: order.id, subscriberId: order.subscriberId }, { result: neaStatus }, neaStatus === "failed" ? body.failureReasonCode || "NEA_ACTIVATION_FAILED" : null);
+  const neaRequired = order.items.some((item) => offeringCharacteristicValue(db, item.productOfferingId, "neaActivationRequired")?.value === "true");
+  const neaStatus = !neaRequired ? "skipped" : body.provisioningResult === "failed" || failedStep === "neaActivation" ? "failed" : "success";
+  const neaFailureReason = body.failureReasonCode || "NEA_ACTIVATION_FAILED";
+  fulfillmentStep(
+    order,
+    "neaActivation",
+    neaStatus,
+    { orderId: order.id, subscriberId: order.subscriberId },
+    neaStatus === "skipped" ? { status: "skipped", reason: "NEA_ACTIVATION_NOT_REQUIRED" } : { activationId: randomUUID(), status: neaStatus },
+    neaStatus === "failed" ? neaFailureReason : null
+  );
   if (neaStatus !== "success") {
+    if (neaStatus === "skipped") {
+      order.fulfillment.provisioningStatus = "completed";
+    } else {
     order.fulfillment.provisioningStatus = "failed";
-    order.fulfillment.failureReasonCode = body.failureReasonCode || "NEA_ACTIVATION_FAILED";
-    order.failureReasonCode = order.fulfillment.failureReasonCode;
-    order.failureMessage = "NEA activation fulfillment step failed.";
-    order.completedAt = nowIso();
-    for (const item of order.items) {
-      item.status = "failed";
-      item.failureReasonCode = order.failureReasonCode;
-      item.fulfillmentStatus = "failed";
+      return failFulfillmentOrder(order, "neaActivation", neaFailureReason);
     }
-    return transitionProductOrder(order, "failed", order.failureReasonCode);
   }
 
   order.fulfillment.provisioningStatus = "completed";

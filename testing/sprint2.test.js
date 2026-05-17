@@ -39,29 +39,31 @@ function reason(fn) {
   assert.fail("Expected function to throw");
 }
 
-function createValidatedCart(db) {
+function createValidatedCart(db, options = {}) {
   const spec = activateProductSpecification(db, createProductSpecification(db, {
     name: `Sprint 2 Spec ${randomUUID()}`,
     version: "1.0",
-    characteristics
+    characteristics: options.characteristics || characteristics
   }).id);
   const offering = createProductOffering(db, {
     name: `Sprint 2 Offering ${randomUUID()}`,
     productSpecificationId: spec.id,
-    channelAvailability: ["USSD"]
+    channelAvailability: options.channelAvailability || ["USSD"],
+    eligibilityRules: options.eligibilityRules || []
   });
   addProductOfferingPrice(db, offering.id, {
     priceType: "standard",
-    amount: 250,
+    amount: options.amount || 250,
     currency: "NGN",
-    chargingSource: "MA",
+    chargingSource: options.chargingSource || "MA",
+    daId: options.daId,
     isDefault: true
   });
   activateProductOffering(db, offering.id);
 
-  const cart = createShoppingCart(db, { channelId: "USSD", subscriberId: "2348012345678", currency: "NGN" });
+  const cart = createShoppingCart(db, { channelId: options.channelId || "USSD", subscriberId: "2348012345678", currency: "NGN" });
   addCartItem(db, cart.id, { productOfferingId: offering.id, quantity: 2, purchasePolicy: "one-off" });
-  validateShoppingCart(db, cart.id, { subscriberAttributes: { serviceClass: "PREPAID" } });
+  validateShoppingCart(db, cart.id, { subscriberAttributes: options.subscriberAttributes || { serviceClass: "PREPAID" } });
   return { cart, offering };
 }
 
@@ -207,6 +209,50 @@ test("Sprint 2 validation re-evaluates subscriber attributes and balances", () =
     status: 422,
     reasonCode: "SUBSCRIBER_INELIGIBLE"
   });
+  assert.equal(order.status, "failed");
+  assert.equal(order.failureReasonCode, "SUBSCRIBER_INELIGIBLE");
+  assert.ok(order.completedAt);
+});
+
+test("Sprint 2 validation sums DA balances from the request body", () => {
+  const db = createStore();
+  const { cart } = createValidatedCart(db, {
+    chargingSource: "DA",
+    daId: undefined,
+    amount: 150
+  });
+  const order = checkoutShoppingCart(db, cart.id);
+
+  assert.deepEqual(reason(() => validateProductOrder(db, order.id, {
+    subscriberAttributes: {
+      balance: {
+        MA: 0,
+        DA: [
+          { daId: "DA01", balance: 100 },
+          { daId: "DA02", balance: 50 }
+        ]
+      }
+    }
+  })), {
+    status: 422,
+    reasonCode: "INSUFFICIENT_BALANCE"
+  });
+
+  const second = checkoutShoppingCart(db, createValidatedCart(db, {
+    chargingSource: "DA",
+    amount: 150
+  }).cart.id);
+  assert.equal(validateProductOrder(db, second.id, {
+    subscriberAttributes: {
+      balance: {
+        MA: 0,
+        DA: [
+          { daId: "DA01", balance: 150 },
+          { daId: "DA02", balance: 150 }
+        ]
+      }
+    }
+  }).status, "inProgress");
 });
 
 test("Sprint 2 enforces allowed ProductOrder state transitions", () => {
@@ -249,7 +295,23 @@ test("Sprint 2 fulfillment can fail on charging", () => {
     failureReasonCode: "INSUFFICIENT_BALANCE"
   });
   assert.equal(failed.status, "failed");
+  assert.equal(failed.failureReasonCode, "FULFILLMENT_STEP_FAILED");
   assert.equal(failed.fulfillment.failureReasonCode, "INSUFFICIENT_BALANCE");
+  assert.equal(failed.fulfillmentSteps.length, 1);
+});
+
+test("Sprint 2 fulfillment skips NEA when the specification does not require activation", () => {
+  const db = createStore();
+  const noNeaCharacteristics = characteristics.map((item) => item.name === "neaActivationRequired" ? { ...item, value: "false" } : item);
+  const { cart } = createValidatedCart(db, { characteristics: noNeaCharacteristics });
+  const order = checkoutShoppingCart(db, cart.id);
+  validateProductOrder(db, order.id);
+
+  const fulfilled = executeProductOrderFulfillment(db, order.id, {});
+  const neaStep = fulfilled.fulfillmentSteps.find((step) => step.stepName === "neaActivation");
+
+  assert.equal(fulfilled.status, "completed");
+  assert.equal(neaStep.status, "skipped");
 });
 
 test("Sprint 2 cancellation is allowed before completion and blocked after completion", () => {

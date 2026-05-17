@@ -165,6 +165,7 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderI
 ```
 
 Validation uses prompt-standard failure reason codes, including `OFFERING_NO_LONGER_AVAILABLE`, `CHANNEL_NOT_AUTHORIZED`, `SUBSCRIBER_INELIGIBLE`, and `INSUFFICIENT_BALANCE`.
+Any validation failure moves the order to `failed` and records all unique failure reason codes on `OrderValidationResult.failureReasonCodes`.
 
 Move an order to `inProgress`:
 
@@ -189,6 +190,10 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/product-order/
   "failureReasonCode": "INSUFFICIENT_BALANCE"
 }'
 ```
+
+Fulfillment failures return HTTP `422`, stop before subsequent steps, set `failureReasonCode` to `FULFILLMENT_STEP_FAILED`, and keep the step-specific reason in `fulfillment.failureReasonCode`.
+
+When `neaActivationRequired` is `false` on the ProductSpecification, fulfillment still records the `neaActivation` step but marks it `skipped`.
 
 Cancel an order:
 

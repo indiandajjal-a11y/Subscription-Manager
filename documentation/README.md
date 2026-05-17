@@ -15,3 +15,7 @@ Sprint 1 focuses on the TMF foundation: Product Catalog, Shopping Cart, and a Pr
 Sprint 2 extends ProductOrder into validation, state transitions, fulfillment stubs, and cancellation.
 
 Sprint 3 adds ProductInventory, compensation/retry hooks, and channel integration basics.
+
+Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots, and CS integration boundaries.
+
+Sprint 6 stable verification closes the combined prompt gaps around ProductOrder validation, fulfillment failure handling, DA balance checks, and NEA skip behavior.

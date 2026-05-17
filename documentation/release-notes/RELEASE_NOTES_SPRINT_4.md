@@ -38,13 +38,14 @@ This migration adds SubscriberAccount and ChannelAuthToken storage plus Sprint 4
 
 ## Verification
 
-Passing tests after Sprint 4 verification: 53
+Passing tests after Sprint 4 verification: 55
 
 Added coverage:
 
 - `testing/sprint4.test.js`
 - Sprint 2 prompt gap regressions in `testing/sprint2.test.js`
 - Updated terminal-state transition expectation in `testing/sprint3.test.js`
+- DA balance summing, all-validation-failure terminal behavior, NEA skip, and fulfillment failure short-circuit coverage
 
 ## Deferred
 

@@ -255,7 +255,7 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       if ((params = is(method, "POST", pathname, "/api/v1/product-order/:orderId/fulfill"))) {
         const result = executeProductOrderFulfillment(db, params.orderId, await readJson(req));
         await saveIfNeeded(persistence, db);
-        return send(res, 200, result);
+        return send(res, result.status === "failed" ? 422 : 200, result);
       }
       if ((params = is(method, "POST", pathname, "/api/v1/product-order/:orderId/cancel"))) {
         const result = cancelProductOrder(db, params.orderId, await readJson(req));
@@ -292,7 +292,7 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       if ((params = is(method, "POST", pathname, "/api/v1/orders/:orderId/fulfill"))) {
         const result = executeProductOrderFulfillment(db, params.orderId, await readJson(req));
         await saveIfNeeded(persistence, db);
-        return send(res, 200, result);
+        return send(res, result.status === "failed" ? 422 : 200, result);
       }
       if ((params = is(method, "POST", pathname, "/api/v1/orders/:orderId/cancel"))) {
         const result = cancelProductOrder(db, params.orderId, await readJson(req));
