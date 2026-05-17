@@ -12,6 +12,8 @@ Sprint 4 adds channel authentication endpoints, optional protected-route enforce
 
 Sprint 5 adds subscription cancellation eligibility/fulfillment rules and an advanced charging resolution layer for source fallback, partial charging, default source resolution, and CS-attribute discounts.
 
+Sprint 6 adds subscriber lifecycle automation: CS attribute update configuration, named CustomerSegment resolution, renewal scheduling helpers, gift order support, PartyRelationship records, recipient-aware notifications, and per-offering compensation policies.
+
 ## Runtime Components
 
 `code/server.js`
@@ -37,6 +39,11 @@ Sprint 5 adds subscription cancellation eligibility/fulfillment rules and an adv
 - Owns Sprint 3 inventory creation, compensation config/records, retry, terminate orders, notification events, and channel capture logic
 - Owns Sprint 4 auth token, API key, SubscriberAccount snapshot, and live-account order validation logic
 - Owns Sprint 5 cancellation eligibility, termination audit fields, charging resolution records, fallback/partial allocation, and price alteration evaluation
+- Owns Sprint 6 persisted catalog fields for CS attribute updates, bundle categories, gifting, compensation policies, gift order typing, and customer-segment-aware eligibility/discount validation
+
+`code/sprint6.js`
+
+- Provides Sprint 6 helper modules for CustomerSegment, RenewalSchedule, RenewalScheduler, PartyRelationship, gift validation, CS attribute update computation, compensation policy access, renewal order creation, retry tracking, and recipient-aware notifications
 
 `code/sprint4.js`
 
@@ -132,6 +139,23 @@ Sprint 5 adds:
 - `CancellationEligibilityResult` for terminate-order validation
 - `ChargingResolutionRecord` for debit allocation audit
 
+Sprint 6 adds:
+
+- `POST /api/v1/catalog/segments`
+- `GET /api/v1/catalog/segments`
+- `GET /api/v1/catalog/segments/:segmentId`
+- `PATCH /api/v1/catalog/segments/:segmentId`
+- `DELETE /api/v1/catalog/segments/:segmentId`
+- `GET /api/v1/renewal-schedules`
+- `POST /api/v1/renewal-schedules`
+- `GET /api/v1/renewal-schedules/:scheduleId`
+- `DELETE /api/v1/renewal-schedules/:scheduleId`
+- `GET /api/v1/party-relationships`
+- `POST /api/v1/party-relationships`
+- `GET /api/v1/party-relationships/:relationshipId`
+- Gift checkout uses `orderType: "gift"` when a cart item has `purchasePolicy: "gift"` or `beneficiaryId`
+- ProductOrder validation resolves `SubscriberAccount.resolvedSegmentId` before eligibility and discount checks
+
 ## Testing Strategy
 
 `testing/sprint1.test.js`
@@ -161,6 +185,19 @@ Sprint 5 adds:
 
 - SubscriptionId-driven cancellation, cancellation windows, ownership checks, termination fields, and notification suppression
 - DA priority fallback, partial charging, default charging source, and CS-attribute discount tests
+
+`testing/sprint6.test.js`
+
+- CustomerSegment resolution tests
+- CS attribute update computation tests
+- RenewalSchedule and RenewalScheduler tests
+- Gift validation and PartyRelationship tests
+- Compensation policy, retry tracking, and recipient notification tests
+
+Current full-suite result:
+
+- `98` tests passing
+- `0` failures
 
 Run all tests:
 

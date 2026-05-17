@@ -91,8 +91,17 @@ $env:CS_CLIENT_RETRY_COUNT = "2"
 
 If `CS_ENDPOINT_URL` is not set, the Sprint 4 CS client uses local mock responses.
 
+## Sprint 6 Operational Checks
+
+- Run `npm.cmd test` before release. Expected stable result: `98` passing tests, `0` failures.
+- Confirm segment management routes respond under `/api/v1/catalog/segments`.
+- Confirm renewal schedule inspection works through `/api/v1/renewal-schedules`.
+- Confirm sponsor/beneficiary records can be listed through `/api/v1/party-relationships`.
+- For CS attribute update troubleshooting, check fulfillment step records and the CS adapter result from `updateSubscriberAttributes`.
+- For retry troubleshooting, inspect `retryAttempts`, `nextRetryAt`, and `retryStepName` on the ProductOrder.
+
 ## Known Limitations
 
-- PostgreSQL adapter writes full Sprint 1 state after mutations; this is acceptable for Sprint 1 scale but should be replaced by per-aggregate repositories in later sprints.
+- PostgreSQL adapter writes full in-memory state after mutations; this is acceptable for prototype scale but should be replaced by per-aggregate repositories before high-volume production use.
 - Token revocation cache is in memory and does not survive process restarts.
 - Production CS wire-protocol hardening remains vendor-specific integration work.

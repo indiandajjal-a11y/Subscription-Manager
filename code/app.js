@@ -64,6 +64,19 @@ import {
 } from "./domain.js";
 import { store as defaultStore } from "./store.js";
 import { RealChargingSystemClient, sprint4ConfigFromEnv } from "./sprint4.js";
+import {
+  createCustomerSegment,
+  getCustomerSegment,
+  listCustomerSegments,
+  updateCustomerSegment,
+  createRenewalSchedule,
+  getRenewalSchedule,
+  listRenewalSchedules,
+  updateRenewalSchedule,
+  createPartyRelationship,
+  getPartyRelationship,
+  listPartyRelationships
+} from "./sprint6.js";
 
 function send(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -285,6 +298,28 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         return send(res, 200, { deleted: true });
       }
 
+      if (method === "POST" && pathname === "/api/v1/catalog/segments") {
+        const result = createCustomerSegment(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/catalog/segments") {
+        return send(res, 200, listCustomerSegments(db, query));
+      }
+      if ((params = is(method, "GET", pathname, "/api/v1/catalog/segments/:segmentId"))) {
+        return send(res, 200, getCustomerSegment(db, params.segmentId));
+      }
+      if ((params = is(method, "PATCH", pathname, "/api/v1/catalog/segments/:segmentId"))) {
+        const result = updateCustomerSegment(db, params.segmentId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if ((params = is(method, "DELETE", pathname, "/api/v1/catalog/segments/:segmentId"))) {
+        const result = updateCustomerSegment(db, params.segmentId, { status: "retired" });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+
       if (method === "POST" && pathname === "/api/v1/cart") {
         const body = await readJson(req);
         ensureChannelMatch(auth, body.channelId);
@@ -464,6 +499,35 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       }
       if (method === "GET" && pathname === "/api/v1/notification-events") {
         return send(res, 200, listNotificationEvents(db, query));
+      }
+
+      if (method === "GET" && pathname === "/api/v1/renewal-schedules") {
+        return send(res, 200, listRenewalSchedules(db, query));
+      }
+      if (method === "POST" && pathname === "/api/v1/renewal-schedules") {
+        const result = createRenewalSchedule(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if ((params = is(method, "GET", pathname, "/api/v1/renewal-schedules/:scheduleId"))) {
+        return send(res, 200, getRenewalSchedule(db, params.scheduleId));
+      }
+      if ((params = is(method, "DELETE", pathname, "/api/v1/renewal-schedules/:scheduleId"))) {
+        const result = updateRenewalSchedule(db, params.scheduleId, { status: "cancelled" });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+
+      if (method === "GET" && pathname === "/api/v1/party-relationships") {
+        return send(res, 200, listPartyRelationships(db, query));
+      }
+      if (method === "POST" && pathname === "/api/v1/party-relationships") {
+        const result = createPartyRelationship(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if ((params = is(method, "GET", pathname, "/api/v1/party-relationships/:relationshipId"))) {
+        return send(res, 200, getPartyRelationship(db, params.relationshipId));
       }
 
       if (method === "POST" && pathname === "/api/v1/channels") {

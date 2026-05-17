@@ -352,3 +352,58 @@ Key fields:
 - `resolvedAt`
 
 Each `chargeAllocation` stores `priority`, `source`, optional `daId`, `allocationAmount`, `status`, and `csTransactionRef`.
+
+## CustomerSegment
+
+Sprint 6 stores catalog-managed subscriber segments for validation and pricing.
+
+Key fields:
+
+- `id`
+- `name`
+- `description`
+- `resolutionRules`
+- `status`
+- `createdAt`
+- `updatedAt`
+
+Resolution rules support `equals`, `in`, `notIn`, and `contains`. Active segments are evaluated before eligibility and price alteration checks.
+
+## RenewalSchedule
+
+Sprint 6 tracks auto-renewal scheduling.
+
+Key fields:
+
+- `subscriptionId`
+- `scheduledAt`
+- `renewalOfferId`
+- `attemptCount`
+- `lastAttemptAt`
+- `status`
+- `renewalOrderId`
+
+Valid stable statuses are `pending`, `inProgress`, `completed`, `failed`, and `cancelled`.
+
+## PartyRelationship
+
+Sprint 6 records sponsor/beneficiary relationships for gift subscriptions.
+
+Key fields:
+
+- `relationshipType`
+- `sponsorId`
+- `beneficiaryId`
+- `subscriptionId`
+- `orderId`
+- `status`
+
+## Sprint 6 Catalog Extensions
+
+`ProductSpecification` now supports `csAttributeUpdates` and `bundleCategory`.
+
+`ProductOffering` now supports `compensationPolicy`, `giftingEnabled`, `maxGiftBeneficiaries`, `csAttributeUpdates`, and `bundleCategory`.
+
+`SubscriberAccount` now supports `resolvedSegmentId`.
+
+`NotificationEvent` helper records support `recipientType` and `recipientId`.

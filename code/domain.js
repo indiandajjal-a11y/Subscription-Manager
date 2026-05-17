@@ -7,7 +7,7 @@ const VALUE_TYPES = ["number", "string", "boolean"];
 const PRICE_TYPES = ["standard", "discount"];
 const CHARGING_SOURCES = ["MA", "DA", "LOYALTY", "MOBILE_MONEY"];
 const DISCOUNT_TYPES = ["fixed", "percentage"];
-const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "channel", "psoFlag"]; // Sprint 4: added psoFlag
+const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "channel", "psoFlag", "customerSegment"]; // Sprint 6: named CustomerSegment support
 const OPERATORS = ["equals", "notEquals", "in", "notIn"];
 const POLICIES = ["one-off", "auto-renewal", "gift"];
 const ORDER_STATUSES = ["acknowledged", "inProgress", "completed", "failed", "cancelled"];
@@ -71,6 +71,38 @@ function normalizeCharacteristics(characteristics = []) {
   });
 }
 
+function normalizeCsAttributeUpdates(updates = []) {
+  if (!Array.isArray(updates)) fail(400, "INVALID_CS_ATTRIBUTE_UPDATES", "csAttributeUpdates must be an array.", "csAttributeUpdates");
+  return updates.map((update) => {
+    const attribute = update.attribute || update.attributeName;
+    const characteristicName = update.characteristicName || update.offeringCharacteristicName;
+    assertRequired(attribute, "csAttributeUpdates.attribute");
+    assertEnum(update.valueSource, ["fixed", "offeringCharacteristic", "calculatedFromExpiry"], "csAttributeUpdates.valueSource");
+    if (update.valueSource === "fixed") assertRequired(update.fixedValue, "csAttributeUpdates.fixedValue");
+    if (update.valueSource === "offeringCharacteristic") assertRequired(characteristicName, "csAttributeUpdates.characteristicName");
+    return {
+      id: update.id || randomUUID(),
+      attribute,
+      attributeName: attribute,
+      valueSource: update.valueSource,
+      fixedValue: update.fixedValue,
+      characteristicName: characteristicName || null,
+      offeringCharacteristicName: characteristicName || null,
+      offsetDays: update.offsetDays === undefined ? null : Number(update.offsetDays)
+    };
+  });
+}
+
+function normalizeCompensationPolicy(policy = {}) {
+  return {
+    creditBackEnabled: policy.creditBackEnabled ?? true,
+    retryEnabled: policy.retryEnabled ?? false,
+    retryCount: Number(policy.retryCount ?? 3),
+    retryIntervalSeconds: Number(policy.retryIntervalSeconds ?? 60),
+    retryAsync: policy.retryAsync ?? true
+  };
+}
+
 function validateRequiredCharacteristics(characteristics) {
   const byName = new Map(characteristics.map((item) => [item.name, item]));
   for (const [name, rule] of Object.entries(REQUIRED_CHARACTERISTICS)) {
@@ -104,6 +136,8 @@ export function createProductSpecification(db, body) {
     description: body.description,
     status: body.status || "draft",
     characteristics,
+    csAttributeUpdates: normalizeCsAttributeUpdates(body.csAttributeUpdates || []),
+    bundleCategory: body.bundleCategory || null,
     createdAt: timestamp,
     updatedAt: timestamp
   };
@@ -129,8 +163,11 @@ export function updateProductSpecification(db, id, body) {
     specification.characteristics = normalizeCharacteristics(body.characteristics);
     validateRequiredCharacteristics(specification.characteristics);
   }
-  for (const field of ["name", "description"]) {
+  for (const field of ["name", "description", "bundleCategory"]) {
     if (body[field] !== undefined) specification[field] = body[field];
+  }
+  if (body.csAttributeUpdates !== undefined) {
+    specification.csAttributeUpdates = normalizeCsAttributeUpdates(body.csAttributeUpdates);
   }
   specification.updatedAt = nowIso();
   return specification;
@@ -195,6 +232,11 @@ export function createProductOffering(db, body) {
     eligibilityRules: normalizeEligibilityRules(body.eligibilityRules || []),
     channelAvailability: body.channelAvailability || [],
     cancellationWindowHours: body.cancellationWindowHours === undefined ? null : Number(body.cancellationWindowHours),
+    compensationPolicy: normalizeCompensationPolicy(body.compensationPolicy),
+    giftingEnabled: Boolean(body.giftingEnabled),
+    maxGiftBeneficiaries: body.maxGiftBeneficiaries === undefined ? null : Number(body.maxGiftBeneficiaries),
+    csAttributeUpdates: normalizeCsAttributeUpdates(body.csAttributeUpdates || []),
+    bundleCategory: body.bundleCategory || specification.bundleCategory || null,
     sunsetDate: body.sunsetDate,
     createdAt: timestamp,
     updatedAt: timestamp
@@ -231,9 +273,11 @@ export function getProductOffering(db, id) {
 export function updateProductOffering(db, id, body) {
   const offering = getProductOffering(db, id);
   if (body.name) ensureUniqueName(db.productOfferings, body.name, id, "ProductOffering");
-  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours"]) {
+  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours", "giftingEnabled", "maxGiftBeneficiaries", "bundleCategory"]) {
     if (body[field] !== undefined) offering[field] = body[field];
   }
+  if (body.compensationPolicy !== undefined) offering.compensationPolicy = normalizeCompensationPolicy(body.compensationPolicy);
+  if (body.csAttributeUpdates !== undefined) offering.csAttributeUpdates = normalizeCsAttributeUpdates(body.csAttributeUpdates);
   offering.updatedAt = nowIso();
   return autoRetireIfSunset(offering);
 }
@@ -443,7 +487,8 @@ function validateOfferingForCart(db, cart, productOfferingId, purchasePolicy, be
   }
   if (purchasePolicy === "gift") {
     if (!beneficiaryId) fail(422, "BENEFICIARY_REQUIRED", "beneficiaryId is required for gift purchases.", "beneficiaryId");
-    if (beneficiaryId === cart.subscriberId) fail(422, "INVALID_BENEFICIARY", "beneficiaryId must differ from subscriberId for gift purchases.", "beneficiaryId");
+    if (beneficiaryId === cart.subscriberId) fail(422, "SELF_GIFT_NOT_ALLOWED", "beneficiaryId must differ from subscriberId for gift purchases.", "beneficiaryId");
+    if (!offering.giftingEnabled) fail(422, "GIFTING_NOT_ALLOWED_FOR_OFFERING", "ProductOffering does not allow gifting.", "giftingEnabled");
   }
   return offering;
 }
@@ -494,6 +539,31 @@ function ruleMatches(rule, attributes, cart) {
   if (rule.operator === "in") return expected.includes(String(actual));
   if (rule.operator === "notIn") return !expected.includes(String(actual));
   return false;
+}
+
+function resolveCustomerSegmentId(db, subscriberAccount = {}) {
+  if (!db.customerSegments) return null;
+  const activeSegments = [...db.customerSegments.values()]
+    .filter((segment) => segment.status === "active")
+    .sort((a, b) => Number(a.priority || 9999) - Number(b.priority || 9999));
+  for (const segment of activeSegments) {
+    const rules = segment.resolutionRules || [];
+    const matches = rules.every((rule) => {
+      const attributeName = rule.attribute || rule.attributeName;
+      const actual = subscriberAccount[attributeName];
+      const expected = Array.isArray(rule.value) ? rule.value.map(String) : String(rule.value).split(",").map((item) => item.trim());
+      if (rule.operator === "equals") return String(actual) === String(rule.value);
+      if (rule.operator === "in") return expected.includes(String(actual));
+      if (rule.operator === "notIn") return !expected.includes(String(actual));
+      if (rule.operator === "contains") {
+        if (Array.isArray(actual)) return actual.some((item) => expected.includes(String(item)));
+        return String(actual || "").includes(String(rule.value));
+      }
+      return false;
+    });
+    if (matches) return segment.id;
+  }
+  return null;
 }
 
 function conditionMatches(condition, attributes) {
@@ -550,7 +620,9 @@ function alterationRuleMatches(rule, attributes = {}) {
     ? attributes.psoFlags
     : rule.attribute === "offerId"
       ? attributes.offerIds
-      : attributes[rule.attribute];
+      : rule.attribute === "customerSegment"
+        ? attributes.customerSegment || attributes.resolvedSegmentId
+        : attributes[rule.attribute];
   const expected = Array.isArray(rule.value) ? rule.value.map(String) : String(rule.value).split(",").map((item) => item.trim());
   if (rule.operator === "equals") return String(value) === String(rule.value);
   if (rule.operator === "in") return expected.includes(String(value));
@@ -628,7 +700,9 @@ export function checkoutShoppingCart(db, cartId) {
     subscriberId: cart.subscriberId,
     channelId: cart.channelId,
     currency: cart.currency,
-    orderType: "provision",
+    orderType: cart.items.some((item) => item.purchasePolicy === "gift" || item.beneficiaryId) ? "gift" : "provision",
+    sponsorId: cart.items.some((item) => item.beneficiaryId) ? cart.subscriberId : null,
+    beneficiaryId: cart.items.find((item) => item.beneficiaryId)?.beneficiaryId || null,
     originalOrderId: null,
     cancellationReasonCode: null,
     compensationPolicy: compensationConfig?.compensationType || "none",
@@ -1114,7 +1188,9 @@ function resolveChargingForOrder(db, order) {
     serviceClass: subscriberAccount?.serviceClass,
     segment: subscriberAccount?.segment,
     psoFlags: subscriberAccount?.psoFlags,
-    offerIds: subscriberAccount?.offerIds || []
+    offerIds: subscriberAccount?.offerIds || [],
+    customerSegment: subscriberAccount?.resolvedSegmentId,
+    resolvedSegmentId: subscriberAccount?.resolvedSegmentId
   });
   const chargedAmount = Number(Math.max(0, totalAmount - discount.discount).toFixed(2));
   const priority = (price.chargingPriority || []).length > 0
@@ -1387,7 +1463,7 @@ export function retryProductOrderFulfillment(db, orderId, body = {}) {
 }
 
 function createProductInventoryRecordsForOrder(db, order, options = {}) {
-  if (order.orderType !== "provision") return;
+  if (!["provision", "gift"].includes(order.orderType)) return;
   for (const item of order.items) {
     const exists = [...db.productInventories.values()].some((inventory) => inventory.orderItemId === item.id);
     if (exists) continue;
@@ -1892,6 +1968,7 @@ export function createSubscriberAccountSnapshot(db, orderId, csData) {
     })),
     psoFlags: csData.psoFlags || "",
     offerIds: csData.offerIds || [],
+    resolvedSegmentId: csData.resolvedSegmentId || null,
     expiryDate: csData.expiryDate || null,
     fetchedAt: nowIso(),
     csResponseCode: csData.responseCode || csData.csResponseCode || "0",
@@ -1923,6 +2000,7 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
   if (!subscriberAccount) {
     fail(422, "CS_SUBSCRIBER_FETCH_FAILED", "Subscriber account data is required for order validation.", "subscriberAccount");
   }
+  subscriberAccount.resolvedSegmentId = resolveCustomerSegmentId(db, subscriberAccount);
 
   const failureReasonCodes = [];
   let channelValid = true;
@@ -1955,6 +2033,7 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
     const attributes = {
       serviceClass: subscriberAccount.serviceClass,
       segment: subscriberAccount.segment,
+      customerSegment: subscriberAccount.resolvedSegmentId,
       channel: order.channelId
     };
 
@@ -1971,6 +2050,9 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
           subscriberEligible = false;
           failureReasonCodes.push("PSO_FLAG_INELIGIBLE");
         }
+      } else if (rule.ruleType === "customerSegment" && !subscriberAccount.resolvedSegmentId) {
+        subscriberEligible = false;
+        failureReasonCodes.push("SEGMENT_NOT_RESOLVED");
       } else if (!ruleMatches(rule, attributes, { channelId: order.channelId })) {
         subscriberEligible = false;
         failureReasonCodes.push(rule.failureReasonCode || "SUBSCRIBER_INELIGIBLE");

@@ -360,3 +360,39 @@ List channel interactions:
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/channel-interactions?subscriberId=2348012345678"
 ```
+
+## Sprint 6 Examples
+
+Create a customer segment:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/segments" -ContentType "application/json" -Body '{
+  "name": "STAFF",
+  "description": "Staff segment",
+  "resolutionRules": [
+    { "attribute": "serviceClass", "operator": "equals", "value": "STAFF" }
+  ]
+}'
+```
+
+List renewal schedules:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/renewal-schedules?status=pending"
+```
+
+Create a gift cart item:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/items" -ContentType "application/json" -Body '{
+  "productOfferingId": "{offeringId}",
+  "purchasePolicy": "gift",
+  "beneficiaryId": "2348099999999"
+}'
+```
+
+List gift party relationships:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/party-relationships?sponsorId=2348012345678"
+```

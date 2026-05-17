@@ -87,3 +87,10 @@ npm.cmd start
 cd "C:\Subscription Manager"
 npm.cmd test
 ```
+
+Sprint 6 stable expected result:
+
+- `98` passing tests
+- `0` failures
+
+On Windows PowerShell, prefer `npm.cmd test`; `npm test` may invoke `npm.ps1` and fail when script execution is disabled.

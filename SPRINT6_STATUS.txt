@@ -1,0 +1,35 @@
+SPRINT 6 / SPRINT 10 STABLE STATUS
+==================================
+
+Status: Complete and verified
+Date: 2026-05-18
+
+Verification
+------------
+- Sprint 5 cancellation and advanced charging were re-tested successfully.
+- Full test command: npm.cmd test
+- Result: 98 passing tests, 0 failures.
+
+Implemented Gap Closures
+------------------------
+- ProductSpecification now persists csAttributeUpdates and bundleCategory.
+- ProductOffering now persists compensationPolicy, giftingEnabled, maxGiftBeneficiaries, csAttributeUpdates, and bundleCategory.
+- CustomerSegment helpers and REST endpoints are available.
+- ProductOrder validation resolves SubscriberAccount.resolvedSegmentId and evaluates customerSegment eligibility and discount rules.
+- RenewalSchedule helpers use Sprint 6 stable statuses: pending, inProgress, completed, failed, cancelled.
+- Gift cart checkout creates gift orders and applies Sprint 6 gift reason codes.
+- PartyRelationship helpers and REST endpoints are available.
+- Notification helper records recipientType and recipientId.
+- RealChargingSystemClient supports updateSubscriberAttributes in mock and real modes.
+- Documentation and release notes were updated.
+
+Primary Files
+-------------
+- code/domain.js
+- code/app.js
+- code/sprint4.js
+- code/sprint6.js
+- testing/sprint1.test.js
+- testing/sprint6.test.js
+- documentation/release-notes/Subscription_Manager_Release_Notes.md
+- documentation/release-notes/RELEASE_NOTES_SPRINT_6_STABLE.md

@@ -17,7 +17,11 @@ export function createStore() {
     revokedTokens: new Set(), // In-memory revocation cache (cleared on restart)
     authTokenRateLimitBuckets: new Map(),
     cancellationEligibilityResults: new Map(),
-    chargingResolutionRecords: new Map()
+    chargingResolutionRecords: new Map(),
+    // Sprint 6 additions
+    customerSegments: new Map(),
+    renewalSchedules: new Map(),
+    partyRelationships: new Map()
   };
 }
 

@@ -31,12 +31,14 @@ Sprint 1 establishes the foundation for:
 
 ## Future Expansion
 
-Later sprints can add:
+Current stable capabilities now include:
 
-- Full order lifecycle
-- Product inventory
-- Charging system integration
-- Channel authentication
-- Notifications
-- Renewal scheduling
-- Network activation
+- Full ProductOrder validation and fulfillment lifecycle
+- Product inventory with activation, renewal, cancellation, and termination fields
+- Charging system integration boundaries for account fetch, debit, attach, remove, credit-back, and attribute updates
+- Channel authentication with JWT/API-key enforcement
+- Cancellation, advanced charging fallback, partial charging, default charging source, and CS-attribute discounts
+- Customer segment resolution
+- Renewal scheduling helpers
+- Gift subscription validation and sponsor/beneficiary relationship records
+- Notification event records with recipient context

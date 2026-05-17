@@ -26,13 +26,16 @@ The service includes:
 - API examples
 - Installation and operations notes
 
-## Not Yet Included
+## Sprint 6 Stable Additions
 
-The following are intentionally deferred:
+The platform now includes:
 
-- Customer charging
-- Product inventory
-- Full product order workflow
+- Customer charging resolution with DA fallback, partial charging, and discounts
+- Product inventory with cancellation and renewal fields
+- ProductOrder workflow for provision, terminate, renew helper flows, and gift orders
 - Channel authentication
-- Subscriber notifications
-- Network activation
+- Notification event records for self, sponsor, and beneficiary recipients
+- Network activation/deactivation hooks
+- Customer segment resolution and configurable compensation policy support
+
+Notification template rendering and outbound dispatch remain deferred to the notification sprint.

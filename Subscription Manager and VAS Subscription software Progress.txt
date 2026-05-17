@@ -1,0 +1,87 @@
+Implemented and shipped Sprint 8 gaps.
+
+What changed:
+
+Verified Sprint 7/Sprint 3 baseline first: tests were passing.
+Added Sprint 4 HTTP auth endpoints and optional protected-route enforcement.
+Added channel ownership checks, offering authorization checks, token rate limiting, subscriber-account lookup endpoint, and CS-backed order validation path.
+Extended ProductInventory completion with subscriptionId, renewalOfferId, refillId, notificationFlags, and csAttachmentId.
+Tightened RealChargingSystemClient with transient retries plus real remove/credit-back endpoint mappings.
+Updated tests and docs under testing and documentation.
+Verification:
+
+node --test testing/*.test.js
+Result: 63/63 passing.
+Git:
+
+Commit: bfc6313 Implement Sprint 8 auth and CS integration gaps
+Tag: v3.0 with message Sprint 8 - stable release
+Pushed main to origin
+Pushed tag v3.0 to origin
+Working tree is clean.
+
+Implemented and shipped Sprint 9/Sprint 5.
+
+Sprint 8 verification passed first: 63/63. Sprint 9 prompt fit in context, so I implemented the gaps:
+
+SubscriptionId-driven terminate orders.
+Cancellation eligibility snapshots, ownership checks, cancellation window checks.
+Inventory termination details: terminationReason, neaDeprovisioningFailed, notification suppression.
+Advanced charging fields on prices.
+Charging resolution audit records.
+DA priority fallback, partial MA/DA charging, default charging source, and CS-attribute discounts.
+New endpoints for subscription lookup, charging resolution, and price get/patch.
+Added testing/sprint5.test.js.
+Updated documentation and added Sprint 5 release notes.
+Final verification:
+
+node --test testing/*.test.js
+Result: 70/70 passing.
+Git:
+
+Commit: cfea29a Implement Sprint 9 cancellation and advanced charging
+Tag: v3.1 with message Sprint 9 - stable release
+Pushed main
+Pushed tag v3.1
+Working tree is clean.
+I used v3.1 because v3.0 already exists from Sprint 8, and overwriting release tags would be messy history.
+
+
+
+
+
+
+Verify development for sprint 9 "Sprint_5_AI_Dev_Prompt.md"  test fully and please help check if we have enough tokens for attached file (Sprint 10 "Sprint_6_AI_Dev_Prompt.md"). if no Quit, if yes, lets go ahead and impliment (compare this prompt against what we already built and close any gaps precisely) also update testing and documentation files at the end
+C:\Subscription Manager\documentation
+C:\Subscription Manager\testing
+also update git by adding all changes, Commit with meaningful message, Create a Git tag (VERY important - something like "v4.0 -m "Sprint 10 - stable release ), push the code and lastly push the tag
+Refer to path 
+"C:\Users\Pawan Singhal\AppData\Roaming\TRAE SOLO\ModularData\ai-agent\work-mode-projects\6a09ccba6b71804384d2f7eb" for sprints details 
+path "C:\Subscription Manager" for development and code
+
+Make sure to update below documents
+Name					Folder Path
+README.md				C:\Subscription Manager\documentation\
+INSTALLATION_GUIDE.md	C:\Subscription Manager\documentation\installation\
+PRODUCT_OVERVIEW.md		C:\Subscription Manager\documentation\marketing\
+STAKEHOLDER_SUMMARY.md	C:\Subscription Manager\documentation\marketing\
+RUNBOOK.md				C:\Subscription Manager\documentation\operations\
+API_EXAMPLES.md			C:\Subscription Manager\documentation\technical\
+ARCHITECTURE.md			C:\Subscription Manager\documentation\technical\
+DATA_MODEL.md			C:\Subscription Manager\documentation\technical\
+
+Combine all release notes in single file and keep updating with each sprint (use Subscription Manager release note Vx and update Vx (V1, V2, V3 & so on)
+Name								Folder Path
+RELEASE_NOTES_SPRINT_1.md			C:\Subscription Manager\documentation\release-notes\
+RELEASE_NOTES_SPRINT_2.md			C:\Subscription Manager\documentation\release-notes\
+RELEASE_NOTES_SPRINT_3.md			C:\Subscription Manager\documentation\release-notes\
+RELEASE_NOTES_SPRINT_4.md			C:\Subscription Manager\documentation\release-notes\
+RELEASE_NOTES_SPRINT_5.md			C:\Subscription Manager\documentation\release-notes\
+RELEASE_NOTES_SPRINT_6_STABLE.md	C:\Subscription Manager\documentation\release-notes\
+
+Sprint 10 implementation completed on 2026-05-18.
+Sprint 5 verification: passed as part of full suite.
+Sprint 10 prompt fit in available context and was implemented.
+Full test command: npm.cmd test
+Result: 98 passing tests, 0 failures.
+Key closures: CustomerSegment endpoints, segment-aware validation/pricing, CS attribute update client method, renewal schedule stable states, gift order reason codes, PartyRelationship endpoints, recipient notification helpers, compensation policy persistence, documentation and consolidated release notes.

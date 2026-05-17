@@ -154,6 +154,13 @@ export class RealChargingSystemClient {
     return this._withTransientRetries(() => this._realCreditBack(params));
   }
 
+  async updateSubscriberAttributes(params) {
+    if (this.useMock) {
+      return this._mockUpdateSubscriberAttributes(params);
+    }
+    return this._withTransientRetries(() => this._realUpdateSubscriberAttributes(params));
+  }
+
   async _withTransientRetries(operation) {
     let lastResult;
     const maxRetries = Number(this.config.csClientRetryCount || 0);
@@ -213,6 +220,15 @@ export class RealChargingSystemClient {
       transactionId: randomUUID(),
       status: "success",
       failureReason: null
+    };
+  }
+
+  async _mockUpdateSubscriberAttributes(params) {
+    return {
+      status: "success",
+      failureReason: null,
+      responseCode: "0",
+      rawResponse: { attributes: params.attributes || [] }
     };
   }
 
@@ -522,6 +538,47 @@ export class RealChargingSystemClient {
         transactionId: null,
         status: "failed",
         failureReason: error.name === "AbortError" ? "CS_TIMEOUT" : `CS_CREDIT_BACK_ERROR: ${error.message}`
+      };
+    }
+  }
+
+  async _realUpdateSubscriberAttributes(params) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.config.csTimeoutMs);
+
+    try {
+      const response = await fetch(`${this.config.csEndpointUrl}/scapv2/subscriber-attributes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Username": this.config.csUsername,
+          "X-Password": this.config.csPassword,
+          "X-Node": this.config.csNodeName
+        },
+        body: JSON.stringify({
+          subscriberId: params.subscriberId,
+          attributes: params.attributes || [],
+          transactionRef: params.transactionRef
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json().catch(() => ({}));
+      return {
+        status: response.ok && data.status !== "failed" ? "success" : "failed",
+        failureReason: data.failureReason || (response.ok ? null : `CS_ATTRIBUTE_UPDATE_ERROR_${response.status}`),
+        responseCode: data.responseCode || String(response.status),
+        rawResponse: data
+      };
+    } catch (error) {
+      clearTimeout(timeoutId);
+      return {
+        status: "failed",
+        failureReason: `CS_ATTRIBUTE_UPDATE_ERROR: ${error.message}`,
+        responseCode: "CLIENT_ERROR",
+        rawResponse: { error: error.message },
+        isTransient: error.name === "AbortError"
       };
     }
   }

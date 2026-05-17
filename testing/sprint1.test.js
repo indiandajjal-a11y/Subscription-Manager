@@ -196,7 +196,7 @@ test("14b. gift item with beneficiary equal to subscriber is rejected", () => {
   const cart = createShoppingCart(db, { channelId: "USSD", subscriberId: "234", currency: "NGN" });
   assert.deepEqual(reason(() => addCartItem(db, cart.id, { productOfferingId: offering.id, purchasePolicy: "gift", beneficiaryId: "234" })), {
     status: 422,
-    reasonCode: "INVALID_BENEFICIARY"
+    reasonCode: "SELF_GIFT_NOT_ALLOWED"
   });
 });
 
