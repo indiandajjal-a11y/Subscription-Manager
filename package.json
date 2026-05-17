@@ -1,7 +1,7 @@
 {
   "name": "subscription-manager",
-  "version": "0.1.0",
-  "description": "Sprint 1 ISP Subscription Manager: TMF620 catalog and TMF663 shopping cart.",
+  "version": "5.1.0",
+  "description": "ISP Subscription Manager: TMF-aligned subscription lifecycle management with SonarQube quality integration.",
   "type": "module",
   "scripts": {
     "start": "node code/server.js",
@@ -15,4 +15,3 @@
     "node": ">=20"
   }
 }
-
