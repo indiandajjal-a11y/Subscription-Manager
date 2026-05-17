@@ -68,6 +68,34 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offeri
 }'
 ```
 
+Add a Sprint 5 advanced charging price:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings/{offeringId}/prices" -ContentType "application/json" -Body '{
+  "priceType": "standard",
+  "amount": 1000,
+  "currency": "NGN",
+  "chargingSource": "DA",
+  "defaultChargingSource": "MA",
+  "allowPartialCharge": true,
+  "chargingPriority": [
+    { "priority": 1, "source": "DA", "daId": "DA1" },
+    { "priority": 2, "source": "MA" }
+  ],
+  "priceAlteration": [
+    {
+      "name": "VIP discount",
+      "alterationType": "DISCOUNT_PERCENTAGE",
+      "alterationValue": 50,
+      "eligibilityRules": [
+        { "attribute": "serviceClass", "operator": "equals", "value": "VIP" }
+      ]
+    }
+  ],
+  "isDefault": true
+}'
+```
+
 Activate an offering:
 
 ```powershell
@@ -240,6 +268,23 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/{orderI
 
 Validate and fulfill the returned `terminateOrderId` through the same `/orders/{orderId}/validate` and `/orders/{orderId}/fulfill` endpoints. Completion updates the linked inventory record to `terminated` and writes an `ORDER_CANCELLED` notification event.
 
+Create a Sprint 5 terminate order directly from a subscription:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders" -ContentType "application/json" -Body '{
+  "orderType": "terminate",
+  "subscriptionId": "{inventoryId}",
+  "subscriberId": "2348012345678",
+  "cancellationReason": "Subscriber requested"
+}'
+```
+
+Get charging resolution audit for an order:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/orders/{orderId}/charging-resolution"
+```
+
 ## ProductInventory
 
 Query inventory by subscriber:
@@ -258,6 +303,12 @@ Get one inventory record:
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/inventory/{inventoryId}"
+```
+
+Get one subscription record:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/subscriptions/{inventoryId}"
 ```
 
 ## Channels

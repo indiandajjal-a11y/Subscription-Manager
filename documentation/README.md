@@ -18,4 +18,6 @@ Sprint 3 adds ProductInventory, compensation/retry hooks, and channel integratio
 
 Sprint 4 adds channel authentication endpoints, optional protected-route enforcement, SubscriberAccount snapshots, and CS integration boundaries.
 
+Sprint 5 adds subscription cancellation business rules, termination audit fields, and advanced charging resolution for fallback, partial charging, defaults, and CS-attribute discounts.
+
 Sprint 6 stable verification closes the combined prompt gaps around ProductOrder validation, fulfillment failure handling, DA balance checks, and NEA skip behavior.

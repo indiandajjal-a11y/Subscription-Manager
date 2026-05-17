@@ -10,6 +10,8 @@ Sprint 3 adds ProductInventory creation, compensation/retry hooks, channel integ
 
 Sprint 4 adds channel authentication endpoints, optional protected-route enforcement, SubscriberAccount snapshots for live CS validation, and CS-ready account/order validation contracts.
 
+Sprint 5 adds subscription cancellation eligibility/fulfillment rules and an advanced charging resolution layer for source fallback, partial charging, default source resolution, and CS-attribute discounts.
+
 ## Runtime Components
 
 `code/server.js`
@@ -34,6 +36,7 @@ Sprint 4 adds channel authentication endpoints, optional protected-route enforce
 - Owns Sprint 2 ProductOrder state transitions and fulfillment stub logic
 - Owns Sprint 3 inventory creation, compensation config/records, retry, terminate orders, notification events, and channel capture logic
 - Owns Sprint 4 auth token, API key, SubscriberAccount snapshot, and live-account order validation logic
+- Owns Sprint 5 cancellation eligibility, termination audit fields, charging resolution records, fallback/partial allocation, and price alteration evaluation
 
 `code/sprint4.js`
 
@@ -119,6 +122,16 @@ Sprint 4 adds:
 - ProductOrder validation using live SubscriberAccount data instead of request-body subscriber attributes
 - `subscriptionId` on completed ProductOrder responses
 
+Sprint 5 adds:
+
+- `POST /api/v1/orders` with `orderType: "terminate"` and `subscriptionId`
+- `GET /api/v1/subscriptions/:subscriptionId`
+- `GET /api/v1/orders/:orderId/charging-resolution`
+- `GET /api/v1/catalog/offerings/:id/prices/:priceId`
+- `PATCH /api/v1/catalog/offerings/:id/prices/:priceId`
+- `CancellationEligibilityResult` for terminate-order validation
+- `ChargingResolutionRecord` for debit allocation audit
+
 ## Testing Strategy
 
 `testing/sprint1.test.js`
@@ -143,6 +156,11 @@ Sprint 4 adds:
 - Channel auth token issue, validation, API key fallback, and revocation tests
 - SubscriberAccount-backed ProductOrder validation tests
 - Token rate limiting, Sprint 4 inventory fields, notification flags, and CS transient retry tests
+
+`testing/sprint5.test.js`
+
+- SubscriptionId-driven cancellation, cancellation windows, ownership checks, termination fields, and notification suppression
+- DA priority fallback, partial charging, default charging source, and CS-attribute discount tests
 
 Run all tests:
 

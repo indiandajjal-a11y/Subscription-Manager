@@ -194,6 +194,7 @@ export function createProductOffering(db, body) {
     prices: [],
     eligibilityRules: normalizeEligibilityRules(body.eligibilityRules || []),
     channelAvailability: body.channelAvailability || [],
+    cancellationWindowHours: body.cancellationWindowHours === undefined ? null : Number(body.cancellationWindowHours),
     sunsetDate: body.sunsetDate,
     createdAt: timestamp,
     updatedAt: timestamp
@@ -230,7 +231,7 @@ export function getProductOffering(db, id) {
 export function updateProductOffering(db, id, body) {
   const offering = getProductOffering(db, id);
   if (body.name) ensureUniqueName(db.productOfferings, body.name, id, "ProductOffering");
-  for (const field of ["name", "channelAvailability", "sunsetDate"]) {
+  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours"]) {
     if (body[field] !== undefined) offering[field] = body[field];
   }
   offering.updatedAt = nowIso();
@@ -263,7 +264,11 @@ export function addProductOfferingPrice(db, offeringId, body) {
   assertEnum(body.priceType, PRICE_TYPES, "priceType");
   assertRequired(body.amount, "amount");
   assertRequired(body.currency, "currency");
-  assertEnum(body.chargingSource, CHARGING_SOURCES, "chargingSource");
+  if (body.chargingSource === undefined && body.defaultChargingSource === undefined) {
+    fail(422, "CHARGING_SOURCE_NOT_CONFIGURED", "chargingSource or defaultChargingSource is required.", "chargingSource");
+  }
+  if (body.chargingSource !== undefined && body.chargingSource !== null) assertEnum(body.chargingSource, CHARGING_SOURCES, "chargingSource");
+  if (body.defaultChargingSource !== undefined && body.defaultChargingSource !== null) assertEnum(body.defaultChargingSource, CHARGING_SOURCES, "defaultChargingSource");
   const currency = String(body.currency).toUpperCase();
   const price = {
     id: randomUUID(),
@@ -271,8 +276,12 @@ export function addProductOfferingPrice(db, offeringId, body) {
     priceType: body.priceType,
     amount: Number(body.amount),
     currency,
-    chargingSource: body.chargingSource,
+    chargingSource: body.chargingSource || null,
     daId: body.daId,
+    defaultChargingSource: body.defaultChargingSource || null,
+    allowPartialCharge: Boolean(body.allowPartialCharge),
+    chargingPriority: normalizeChargingPriority(body.chargingPriority || []),
+    priceAlteration: normalizePriceAlterations(body.priceAlteration || body.priceAlterations || []),
     priority: body.priority === undefined ? undefined : Number(body.priority),
     parentPriceId: body.parentPriceId,
     discountType: body.discountType,
@@ -300,6 +309,34 @@ export function addProductOfferingPrice(db, offeringId, body) {
   return price;
 }
 
+function normalizeChargingPriority(priority = []) {
+  if (!Array.isArray(priority)) fail(400, "INVALID_CHARGING_PRIORITY", "chargingPriority must be an array.", "chargingPriority");
+  return priority.map((rule, index) => {
+    const source = rule.source || rule.chargingSource;
+    assertEnum(source, CHARGING_SOURCES, "chargingPriority.source");
+    return {
+      priority: Number(rule.priority || index + 1),
+      source,
+      daId: rule.daId || null
+    };
+  }).sort((a, b) => a.priority - b.priority);
+}
+
+function normalizePriceAlterations(alterations = []) {
+  if (!Array.isArray(alterations)) fail(400, "INVALID_PRICE_ALTERATION", "priceAlteration must be an array.", "priceAlteration");
+  return alterations.map((alteration) => {
+    assertEnum(alteration.alterationType, ["DISCOUNT_FIXED", "DISCOUNT_PERCENTAGE"], "priceAlteration.alterationType");
+    assertRequired(alteration.alterationValue, "priceAlteration.alterationValue");
+    return {
+      id: alteration.id || randomUUID(),
+      name: alteration.name || "Discount",
+      alterationType: alteration.alterationType,
+      alterationValue: Number(alteration.alterationValue),
+      eligibilityRules: alteration.eligibilityRules || []
+    };
+  });
+}
+
 export function deleteProductOfferingPrice(db, offeringId, priceId) {
   const offering = getProductOffering(db, offeringId);
   const price = offering.prices.find((candidate) => candidate.id === priceId);
@@ -310,6 +347,37 @@ export function deleteProductOfferingPrice(db, offeringId, priceId) {
   }
   offering.prices = offering.prices.filter((candidate) => candidate.id !== priceId && candidate.parentPriceId !== priceId);
   offering.updatedAt = nowIso();
+}
+
+export function getProductOfferingPrice(db, offeringId, priceId) {
+  const offering = getProductOffering(db, offeringId);
+  const price = offering.prices.find((candidate) => candidate.id === priceId);
+  if (!price) fail(404, "PRICE_NOT_FOUND", "ProductOfferingPrice was not found.", "priceId");
+  return price;
+}
+
+export function updateProductOfferingPrice(db, offeringId, priceId, body = {}) {
+  const offering = getProductOffering(db, offeringId);
+  const price = getProductOfferingPrice(db, offeringId, priceId);
+  if (body.chargingSource !== undefined && body.chargingSource !== null) assertEnum(body.chargingSource, CHARGING_SOURCES, "chargingSource");
+  if (body.defaultChargingSource !== undefined && body.defaultChargingSource !== null) assertEnum(body.defaultChargingSource, CHARGING_SOURCES, "defaultChargingSource");
+  for (const field of ["amount", "currency", "chargingSource", "daId", "defaultChargingSource", "allowPartialCharge", "isDefault"]) {
+    if (body[field] !== undefined) price[field] = field === "amount" ? Number(body[field]) : body[field];
+  }
+  if (body.chargingPriority !== undefined) price.chargingPriority = normalizeChargingPriority(body.chargingPriority);
+  if (body.priceAlteration !== undefined || body.priceAlterations !== undefined) {
+    price.priceAlteration = normalizePriceAlterations(body.priceAlteration || body.priceAlterations || []);
+  }
+  if (!price.chargingSource && !price.defaultChargingSource) {
+    fail(422, "CHARGING_SOURCE_NOT_CONFIGURED", "chargingSource or defaultChargingSource is required.", "chargingSource");
+  }
+  if (price.isDefault) {
+    for (const existing of offering.prices) {
+      if (existing.id !== price.id && existing.currency === price.currency) existing.isDefault = false;
+    }
+  }
+  offering.updatedAt = nowIso();
+  return price;
 }
 
 export function addEligibilityRule(db, offeringId, body) {
@@ -477,6 +545,39 @@ export function selectPrice(offering, currency, attributes = {}) {
     })[0] || null;
 }
 
+function alterationRuleMatches(rule, attributes = {}) {
+  const value = rule.attribute === "psoFlag"
+    ? attributes.psoFlags
+    : rule.attribute === "offerId"
+      ? attributes.offerIds
+      : attributes[rule.attribute];
+  const expected = Array.isArray(rule.value) ? rule.value.map(String) : String(rule.value).split(",").map((item) => item.trim());
+  if (rule.operator === "equals") return String(value) === String(rule.value);
+  if (rule.operator === "in") return expected.includes(String(value));
+  if (rule.operator === "notIn") return !expected.includes(String(value));
+  if (rule.operator === "contains") {
+    if (Array.isArray(value)) return value.some((item) => expected.includes(String(item)));
+    return String(value || "").includes(String(rule.value));
+  }
+  return false;
+}
+
+function calculatePriceAlteration(price, amount, attributes = {}) {
+  const eligible = (price.priceAlteration || []).filter((alteration) => {
+    const rules = alteration.eligibilityRules || [];
+    return rules.every((rule) => alterationRuleMatches(rule, attributes));
+  }).map((alteration) => {
+    const discount = alteration.alterationType === "DISCOUNT_PERCENTAGE"
+      ? amount * (alteration.alterationValue / 100)
+      : alteration.alterationValue;
+    return {
+      alteration,
+      discount: Math.min(amount, Math.max(0, Number(discount.toFixed(2))))
+    };
+  }).sort((a, b) => b.discount - a.discount);
+  return eligible[0] || { alteration: null, discount: 0 };
+}
+
 export function validateShoppingCart(db, cartId, body = {}) {
   const cart = getShoppingCart(db, cartId, false);
   const attributes = body.subscriberAttributes || {};
@@ -492,7 +593,13 @@ export function validateShoppingCart(db, cartId, body = {}) {
       if (failedRule) fail(422, failedRule.failureReasonCode, "Subscriber is not eligible for this ProductOffering.", "eligibilityRules");
       const price = selectPrice(offering, cart.currency, attributes);
       if (!price) fail(422, "NO_PRICE_FOR_CURRENCY", "No ProductOfferingPrice exists for the cart currency.", "currency");
-      item.pricedAmount = Number((price.amount * item.quantity).toFixed(2));
+      const baseAmount = Number((price.amount * item.quantity).toFixed(2));
+      const previewDiscount = calculatePriceAlteration(price, baseAmount, attributes);
+      item.originalAmount = baseAmount;
+      item.appliedPriceAlterationId = previewDiscount.alteration?.id || null;
+      item.discountAmount = previewDiscount.discount;
+      item.discountStatus = (price.priceAlteration || []).length > 0 ? "indicative" : null;
+      item.pricedAmount = Number(Math.max(0, baseAmount - previewDiscount.discount).toFixed(2));
       item.pricedCurrency = cart.currency;
     } catch (error) {
       item.validationStatus = "invalid";
@@ -542,6 +649,10 @@ export function checkoutShoppingCart(db, cartId) {
       quantity: item.quantity,
       purchasePolicy: item.purchasePolicy,
       beneficiaryId: item.beneficiaryId,
+      originalAmount: item.originalAmount ?? item.pricedAmount,
+      appliedPriceAlterationId: item.appliedPriceAlterationId || null,
+      discountAmount: item.discountAmount || 0,
+      discountStatus: item.discountStatus || null,
       pricedAmount: item.pricedAmount,
       pricedCurrency: item.pricedCurrency,
       amount: item.pricedAmount,
@@ -636,6 +747,9 @@ function recordOrderValidationResult(db, order, result) {
     balanceSufficient: result.balanceSufficient,
     overallValid: result.overallValid,
     failureReasonCodes: result.failureReasonCodes,
+    appliedPriceAlterationId: result.appliedPriceAlterationId || null,
+    discountAmount: Number(result.discountAmount || 0),
+    finalChargeAmount: Number(result.finalChargeAmount || 0),
     validatedAt: nowIso()
   };
   db.orderValidationResults.set(order.id, validation);
@@ -736,13 +850,39 @@ export function validateProductOrder(db, orderId, body = {}) {
     fail(409, "INVALID_ORDER_STATE_TRANSITION", `Cannot transition ProductOrder from ${order.status} to inProgress.`, "status");
   }
   if (order.orderType === "terminate") {
-    const inventory = findInventoryForOrder(db, order.originalOrderId);
+    const inventory = order.subscriptionId ? findInventoryById(db, order.subscriptionId) : findInventoryForOrder(db, order.originalOrderId);
     if (!inventory || inventory.status !== "active") {
       order.failureReasonCode = "SUBSCRIPTION_NOT_ACTIVE";
       order.failureMessage = "Subscription is not active.";
       transitionProductOrder(order, "failed", "SUBSCRIPTION_NOT_ACTIVE");
       fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
     }
+    const originalOrder = getProductOrder(db, order.originalOrderId || inventory.productOrderId || inventory.orderId);
+    const offering = getProductOffering(db, inventory.productOfferingId);
+    const failures = [];
+    if (Number(offering.cancellationWindowHours || 0) > 0 && inventory.activatedAt) {
+      const elapsedMs = Date.now() - new Date(inventory.activatedAt).getTime();
+      if (elapsedMs < Number(offering.cancellationWindowHours) * 60 * 60 * 1000) {
+        failures.push("CANCELLATION_WINDOW_NOT_ELAPSED");
+      }
+    }
+    const renewalInProgress = [...db.productOrders.values()].some((candidate) =>
+      candidate.id !== order.id &&
+      candidate.status === "inProgress" &&
+      candidate.orderType === "provision" &&
+      candidate.renewalForSubscriptionId === inventory.id
+    );
+    if (renewalInProgress) failures.push("RENEWAL_IN_PROGRESS");
+    const csOfferStatus = body.csOfferStatus || (inventory.csAttachmentId ? "attached" : "notAttached");
+    const eligibility = createCancellationEligibilityResult(db, order, inventory, uniqueReasonCodes(failures), csOfferStatus);
+    if (!eligibility.eligibilityPassed) {
+      order.failureReasonCode = eligibility.failureReasonCodes[0];
+      order.failureMessage = `Cancellation eligibility failed: ${eligibility.failureReasonCodes.join(", ")}.`;
+      transitionProductOrder(order, "failed", eligibility.failureReasonCodes[0]);
+      fail(422, eligibility.failureReasonCodes[0], "Cancellation eligibility failed.", "cancellationEligibility");
+    }
+    order.subscriptionId = inventory.id;
+    order.originalOrderId = originalOrder.id;
     transitionProductOrder(order, "inProgress", "Terminate order validation passed");
     order.validationStatus = "valid";
     order.validatedAt = nowIso();
@@ -863,6 +1003,50 @@ function findInventoryForOrder(db, orderId) {
   return [...db.productInventories.values()].find((item) => item.productOrderId === orderId || item.orderId === orderId);
 }
 
+function findInventoryById(db, subscriptionId) {
+  return db.productInventories.get(subscriptionId);
+}
+
+export function createTerminateOrderFromSubscription(db, body = {}, auth = {}) {
+  assertRequired(body.subscriptionId, "subscriptionId");
+  const inventory = findInventoryById(db, body.subscriptionId);
+  if (!inventory || inventory.status !== "active") {
+    fail(422, "SUBSCRIPTION_ALREADY_INACTIVE", "Subscription is not active.", "subscriptionId");
+  }
+  if (auth.subscriberId && inventory.subscriberId !== auth.subscriberId) {
+    fail(403, "SUBSCRIPTION_NOT_OWNED", "Subscription does not belong to this subscriber.", "subscriptionId");
+  }
+  const originalOrder = getProductOrder(db, inventory.productOrderId || inventory.orderId);
+  const terminate = createTerminateOrder(db, originalOrder.id, {
+    subscriberId: inventory.subscriberId,
+    channelId: auth.channelId || body.channelId || originalOrder.channelId,
+    cancellationReasonCode: body.cancellationReasonCode || body.cancellationReason
+  });
+  terminate.subscriptionId = inventory.id;
+  terminate.cancellationReason = body.cancellationReason || body.cancellationReasonCode || null;
+  return terminate;
+}
+
+function createCancellationEligibilityResult(db, order, inventory, failureReasonCodes = [], csOfferStatus = "attached") {
+  if (!db.cancellationEligibilityResults) db.cancellationEligibilityResults = new Map();
+  const result = {
+    id: randomUUID(),
+    orderId: order.id,
+    subscriptionId: inventory.id,
+    eligibilityPassed: failureReasonCodes.length === 0,
+    failureReasonCodes,
+    csOfferStatus,
+    checkedAt: nowIso()
+  };
+  db.cancellationEligibilityResults.set(result.id, result);
+  order.cancellationEligibilityResult = result;
+  return result;
+}
+
+export function getCancellationEligibilityResult(db, orderId) {
+  return [...(db.cancellationEligibilityResults || new Map()).values()].find((item) => item.orderId === orderId) || null;
+}
+
 function handleProvisionCompensation(db, order) {
   if (order.orderType !== "provision" || order.compensationPolicy === "none") return;
   if (order.compensationPolicy === "creditBack") {
@@ -896,20 +1080,115 @@ function completeFailedProvisionOrder(db, order, stepName, failureReason) {
   return failed;
 }
 
+function balanceForAllocation(subscriberAccount, source, daId) {
+  if (!subscriberAccount) return Number.POSITIVE_INFINITY;
+  if (source === "MA") return Number(subscriberAccount.mainBalance || 0);
+  if (source === "DA") {
+    return Number((subscriberAccount.daBalances || []).find((da) => da.daId === daId)?.balance || 0);
+  }
+  if (source === "LOYALTY") return Number(subscriberAccount.loyaltyBalance ?? Number.POSITIVE_INFINITY);
+  if (source === "MOBILE_MONEY") return Number(subscriberAccount.mobileMoneyBalance ?? Number.POSITIVE_INFINITY);
+  return 0;
+}
+
+function priceForOrderItem(db, order, item, subscriberAccount) {
+  const offering = getProductOffering(db, item.productOfferingId);
+  return selectPrice(offering, order.currency, {
+    serviceClass: subscriberAccount?.serviceClass,
+    segment: subscriberAccount?.segment,
+    psoFlags: subscriberAccount?.psoFlags,
+    offerIds: subscriberAccount?.offerIds || []
+  });
+}
+
+function resolveChargingForOrder(db, order) {
+  if (!db.chargingResolutionRecords) db.chargingResolutionRecords = new Map();
+  const subscriberAccount = getSubscriberAccountByOrder(db, order.id);
+  const item = order.items[0];
+  const price = priceForOrderItem(db, order, item, subscriberAccount);
+  if (!price) fail(422, "NO_PRICE_FOR_CURRENCY", "No ProductOfferingPrice exists for the order currency.", "currency");
+  const effectiveSource = price.chargingSource || price.defaultChargingSource;
+  if (!effectiveSource) fail(422, "CHARGING_SOURCE_NOT_CONFIGURED", "No charging source is configured for this price.", "chargingSource");
+  const totalAmount = Number(order.items.reduce((sum, candidate) => sum + Number(candidate.originalAmount ?? candidate.pricedAmount ?? 0), 0).toFixed(2));
+  const discount = calculatePriceAlteration(price, totalAmount, {
+    serviceClass: subscriberAccount?.serviceClass,
+    segment: subscriberAccount?.segment,
+    psoFlags: subscriberAccount?.psoFlags,
+    offerIds: subscriberAccount?.offerIds || []
+  });
+  const chargedAmount = Number(Math.max(0, totalAmount - discount.discount).toFixed(2));
+  const priority = (price.chargingPriority || []).length > 0
+    ? price.chargingPriority
+    : [{ priority: 1, source: effectiveSource, daId: price.daId || null }];
+  const allocations = [];
+  let remaining = chargedAmount;
+
+  if (price.allowPartialCharge) {
+    for (const rule of priority) {
+      if (remaining <= 0) break;
+      const available = balanceForAllocation(subscriberAccount, rule.source, rule.daId);
+      if (available <= 0 || ["LOYALTY", "MOBILE_MONEY"].includes(rule.source)) {
+        allocations.push({ priority: rule.priority, source: rule.source, daId: rule.daId || null, allocationAmount: 0, status: "skipped", csTransactionRef: `${order.id}-${rule.priority}` });
+        continue;
+      }
+      const amount = Number(Math.min(remaining, available).toFixed(2));
+      allocations.push({ priority: rule.priority, source: rule.source, daId: rule.daId || null, allocationAmount: amount, status: "debited", csTransactionRef: `${order.id}-${rule.priority}` });
+      remaining = Number((remaining - amount).toFixed(2));
+    }
+    if (remaining > 0) fail(422, "INSUFFICIENT_BALANCE_PARTIAL_COVERAGE", "Configured sources cannot cover the partial charge.", "chargingPriority");
+  } else {
+    let debited = false;
+    for (const rule of priority) {
+      const available = balanceForAllocation(subscriberAccount, rule.source, rule.daId);
+      if (available >= chargedAmount) {
+        allocations.push({ priority: rule.priority, source: rule.source, daId: rule.daId || null, allocationAmount: chargedAmount, status: "debited", csTransactionRef: `${order.id}-${rule.priority}` });
+        debited = true;
+        break;
+      }
+      allocations.push({ priority: rule.priority, source: rule.source, daId: rule.daId || null, allocationAmount: 0, status: "skipped", csTransactionRef: `${order.id}-${rule.priority}` });
+    }
+    if (!debited) fail(422, "INSUFFICIENT_BALANCE_ALL_SOURCES", "All configured charging sources are insufficient.", "chargingPriority");
+  }
+
+  const record = {
+    id: randomUUID(),
+    orderId: order.id,
+    totalAmount,
+    currency: order.currency,
+    appliedPriceAlterationId: discount.alteration?.id || null,
+    appliedDiscount: discount.discount,
+    chargedAmount,
+    resolvedFromDefault: !price.chargingSource && Boolean(price.defaultChargingSource),
+    chargeAllocations: allocations,
+    resolvedAt: nowIso()
+  };
+  db.chargingResolutionRecords.set(order.id, record);
+  order.chargingResolutionId = record.id;
+  order.totalAmount = chargedAmount;
+  return record;
+}
+
+export function getChargingResolutionRecord(db, orderId) {
+  return db.chargingResolutionRecords?.get(orderId) || null;
+}
+
 function executeTerminateOrderFulfillment(db, order, body = {}) {
-  const inventory = findInventoryForOrder(db, order.originalOrderId);
+  const inventory = order.subscriptionId ? findInventoryById(db, order.subscriptionId) : findInventoryForOrder(db, order.originalOrderId);
   if (!inventory || inventory.status !== "active") fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
   const originalOrder = getProductOrder(db, order.originalOrderId);
   const failedStep = body.failedStep;
-  const removeStatus = failedStep === "removeOffer" ? "failed" : "success";
+  const removeStatus = !inventory.csAttachmentId ? "skipped" : failedStep === "removeOffer" ? "failed" : "success";
+  const removeResponseStatus = body.removeOfferResult || (body.csOfferStatus === "notFound" ? "notFound" : removeStatus);
+  const removeSucceeded = ["success", "skipped", "notFound"].includes(removeResponseStatus);
   fulfillmentStep(order, "removeOffer", removeStatus, {
     orderId: order.id,
     originalOrderId: order.originalOrderId,
     subscriberId: order.subscriberId,
-    productOfferingId: inventory.productOfferingId
-  }, { removalId: randomUUID(), status: removeStatus }, removeStatus === "failed" ? "REMOVE_OFFER_FAILED" : null);
-  if (removeStatus !== "success") {
-    const failed = failFulfillmentOrder(order, "removeOffer", "REMOVE_OFFER_FAILED");
+    productOfferingId: inventory.productOfferingId,
+    csAttachmentId: inventory.csAttachmentId || null
+  }, removeStatus === "skipped" ? { status: "skipped", reason: "CS_ATTACHMENT_ID_NOT_SET" } : { removalId: randomUUID(), status: removeResponseStatus }, removeSucceeded ? null : "CS_OFFER_REMOVE_FAILED");
+  if (!removeSucceeded) {
+    const failed = failFulfillmentOrder(order, "removeOffer", "CS_OFFER_REMOVE_FAILED");
     recordNotification(db, "ORDER_FAILED", failed, {});
     return failed;
   }
@@ -920,9 +1199,8 @@ function executeTerminateOrderFulfillment(db, order, body = {}) {
     subscriberId: order.subscriberId
   }, deactivationStatus === "skipped" ? { status: "skipped", reason: "NEA_DEACTIVATION_NOT_REQUIRED" } : { deactivationId: randomUUID(), status: deactivationStatus }, deactivationStatus === "failed" ? "NEA_DEACTIVATION_FAILED" : null);
   if (deactivationStatus === "failed") {
-    const failed = failFulfillmentOrder(order, "neaDeactivation", "NEA_DEACTIVATION_FAILED");
-    recordNotification(db, "ORDER_FAILED", failed, {});
-    return failed;
+    inventory.neaDeprovisioningFailed = true;
+    inventory.updatedAt = nowIso();
   }
   for (const item of order.items) {
     item.status = "completed";
@@ -932,8 +1210,12 @@ function executeTerminateOrderFulfillment(db, order, body = {}) {
   const completed = transitionProductOrder(order, "completed", "Subscription terminated");
   inventory.status = "terminated";
   inventory.terminatedAt = completed.completedAt;
+  inventory.terminationReason = order.cancellationReason || order.cancellationReasonCode || null;
   inventory.updatedAt = completed.completedAt;
-  recordNotification(db, "ORDER_CANCELLED", completed, { inventoryId: inventory.id, originalOrderId: order.originalOrderId });
+  order.cancellationConfirmedAt = completed.completedAt;
+  if (inventory.notificationFlags?.onExpiry !== false) {
+    recordNotification(db, "ORDER_CANCELLED", completed, { inventoryId: inventory.id, subscriptionId: inventory.id, originalOrderId: order.originalOrderId });
+  }
   return completed;
 }
 
@@ -946,17 +1228,39 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   const failedStep = body.failedStep;
   const debitStatus = body.chargingResult === "failed" || failedStep === "debit" ? "failed" : "success";
   const debitFailureReason = body.failureReasonCode || "CHARGING_FAILED";
-  fulfillmentStep(
-    order,
-    "debit",
-    debitStatus,
-    { orderId: order.id, subscriberId: order.subscriberId, amount: order.totalAmount, currency: order.currency },
-    { transactionId: randomUUID(), status: debitStatus },
-    debitStatus === "failed" ? debitFailureReason : null
-  );
+  let chargingResolution;
+  try {
+    chargingResolution = getChargingResolutionRecord(db, order.id) || resolveChargingForOrder(db, order);
+  } catch (error) {
+    return completeFailedProvisionOrder(db, order, "debit", error.reasonCode || "INSUFFICIENT_BALANCE");
+  }
+  const debitedAllocations = chargingResolution.chargeAllocations.filter((allocation) => allocation.status === "debited");
+  for (const allocation of debitedAllocations) {
+    fulfillmentStep(
+      order,
+      "debit",
+      debitStatus,
+      {
+        orderId: order.id,
+        subscriberId: order.subscriberId,
+        amount: allocation.allocationAmount,
+        currency: order.currency,
+        chargingSource: allocation.source,
+        daId: allocation.daId,
+        transactionRef: allocation.csTransactionRef
+      },
+      { transactionId: randomUUID(), status: debitStatus },
+      debitStatus === "failed" ? debitFailureReason : null
+    );
+  }
   if (debitStatus !== "success") {
     order.fulfillment.chargingStatus = "failed";
     order.fulfillment.provisioningStatus = "pending";
+    if (debitedAllocations.length > 1) {
+      for (const allocation of debitedAllocations.slice(0, -1).reverse()) {
+        recordCompensation(db, order, "creditBack", "success", { orderId: order.id, allocation }, { status: "success" });
+      }
+    }
     return completeFailedProvisionOrder(db, order, "debit", debitFailureReason);
   }
   order.fulfillment.chargingStatus = "completed";
@@ -1673,22 +1977,14 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
       }
     }
 
-    // Balance pre-check using live CS data (single source, Sprint 4 scope)
-    const selectedPrice = selectPrice(offering, order.currency, attributes);
-    if (selectedPrice) {
-      const requiredAmount = Number((selectedPrice.amount * item.quantity).toFixed(2));
-      if (selectedPrice.chargingSource === "MA") {
-        if (subscriberAccount.mainBalance < requiredAmount) {
-          balanceSufficient = false;
-          failureReasonCodes.push("INSUFFICIENT_BALANCE");
-        }
-      } else if (selectedPrice.chargingSource === "DA" && selectedPrice.daId) {
-        const daAccount = subscriberAccount.daBalances.find((da) => da.daId === selectedPrice.daId);
-        if (!daAccount || daAccount.balance < requiredAmount) {
-          balanceSufficient = false;
-          failureReasonCodes.push("INSUFFICIENT_BALANCE");
-        }
-      }
+    try {
+      const resolution = resolveChargingForOrder(db, order);
+      item.appliedPriceAlterationId = resolution.appliedPriceAlterationId;
+      item.discountAmount = resolution.appliedDiscount;
+      item.finalChargeAmount = resolution.chargedAmount;
+    } catch (error) {
+      balanceSufficient = false;
+      failureReasonCodes.push(error.reasonCode || "INSUFFICIENT_BALANCE");
     }
   }
 
@@ -1703,7 +1999,10 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
     offeringAvailable,
     balanceSufficient,
     overallValid,
-    failureReasonCodes
+    failureReasonCodes,
+    appliedPriceAlterationId: order.items[0]?.appliedPriceAlterationId || null,
+    discountAmount: order.items.reduce((sum, item) => sum + Number(item.discountAmount || 0), 0),
+    finalChargeAmount: order.items.reduce((sum, item) => sum + Number(item.finalChargeAmount ?? item.pricedAmount ?? 0), 0)
   });
 
   if (!overallValid) {

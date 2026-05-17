@@ -17,12 +17,15 @@ import {
   createProductOffering,
   createProductSpecification,
   createShoppingCart,
+  createTerminateOrderFromSubscription,
   createTerminateOrder,
   deactivateChannel,
   deleteEligibilityRule,
   deleteProductOfferingPrice,
   getProductOffering,
+  getProductOfferingPrice,
   getCompensationConfig,
+  getChargingResolutionRecord,
   getProductInventory,
   getProductOrder,
   getProductSpecification,
@@ -51,6 +54,7 @@ import {
   updateProductInventoryStatus,
   updateProductOrderState,
   updateProductOffering,
+  updateProductOfferingPrice,
   updateProductSpecification,
   validateChannelAuth,
   validateProductOrder,
@@ -257,6 +261,14 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       if ((params = is(method, "GET", pathname, "/api/v1/catalog/offerings/:id/prices"))) {
         return send(res, 200, getProductOffering(db, params.id).prices);
       }
+      if ((params = is(method, "GET", pathname, "/api/v1/catalog/offerings/:id/prices/:priceId"))) {
+        return send(res, 200, getProductOfferingPrice(db, params.id, params.priceId));
+      }
+      if ((params = is(method, "PATCH", pathname, "/api/v1/catalog/offerings/:id/prices/:priceId"))) {
+        const result = updateProductOfferingPrice(db, params.id, params.priceId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
       if ((params = is(method, "DELETE", pathname, "/api/v1/catalog/offerings/:id/prices/:priceId"))) {
         deleteProductOfferingPrice(db, params.id, params.priceId);
         await saveIfNeeded(persistence, db);
@@ -378,7 +390,10 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         return send(res, 200, listProductOrders(db, query));
       }
       if (method === "POST" && pathname === "/api/v1/orders") {
-        const result = captureProductOrderFromCart(db, await readJson(req));
+        const body = await readJson(req);
+        const result = body.orderType === "terminate"
+          ? createTerminateOrderFromSubscription(db, body, { ...auth, subscriberId: body.subscriberId })
+          : captureProductOrderFromCart(db, body);
         await saveIfNeeded(persistence, db);
         return send(res, 201, result);
       }
@@ -422,12 +437,22 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         if (!result) fail(404, "SUBSCRIBER_ACCOUNT_NOT_FOUND", "SubscriberAccount snapshot was not found.", "orderId");
         return send(res, 200, result);
       }
+      if ((params = is(method, "GET", pathname, "/api/v1/orders/:orderId/charging-resolution"))) {
+        const order = getProductOrder(db, params.orderId);
+        ensureChannelMatch(auth, order.channelId);
+        const result = getChargingResolutionRecord(db, params.orderId);
+        if (!result) fail(404, "CHARGING_RESOLUTION_NOT_FOUND", "ChargingResolutionRecord was not found.", "orderId");
+        return send(res, 200, result);
+      }
 
       if (method === "GET" && pathname === "/api/v1/inventory") {
         return send(res, 200, listProductInventory(db, query));
       }
       if ((params = is(method, "GET", pathname, "/api/v1/inventory/:inventoryId"))) {
         return send(res, 200, getProductInventory(db, params.inventoryId));
+      }
+      if ((params = is(method, "GET", pathname, "/api/v1/subscriptions/:subscriptionId"))) {
+        return send(res, 200, getProductInventory(db, params.subscriptionId));
       }
       if ((params = is(method, "PATCH", pathname, "/api/v1/inventory/:inventoryId/status"))) {
         const result = updateProductInventoryStatus(db, params.inventoryId, await readJson(req));

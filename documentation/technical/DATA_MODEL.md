@@ -26,6 +26,7 @@ Key relationships:
 - References one `ProductSpecification`
 - Owns zero or more `ProductOfferingPrice` records
 - Owns zero or more `EligibilityRule` records
+- May define `cancellationWindowHours` for Sprint 5 cancellation eligibility
 
 Statuses:
 
@@ -48,6 +49,13 @@ Supported charging sources:
 - `DA`
 - `LOYALTY`
 - `MOBILE_MONEY`
+
+Sprint 5 charging fields:
+
+- `defaultChargingSource`
+- `allowPartialCharge`
+- `chargingPriority`
+- `priceAlteration`
 
 Default rule:
 
@@ -191,6 +199,8 @@ Key fields:
 - `currency`
 - `beneficiaryId`
 - `terminatedAt`
+- `terminationReason`
+- `neaDeprovisioningFailed`
 - `renewalOfferId`
 - `refillId`
 - `notificationFlags`
@@ -311,3 +321,34 @@ Key fields:
 ## Auth Rate Limit Buckets
 
 In-memory token endpoint counters are kept per channel and minute window. They enforce `AUTH_TOKEN_RATE_LIMIT` for Sprint 4 local/runtime behavior and are intentionally not persistent.
+
+## CancellationEligibilityResult
+
+Sprint 5 stores one immutable cancellation eligibility snapshot per terminate-order validation.
+
+Key fields:
+
+- `orderId`
+- `subscriptionId`
+- `eligibilityPassed`
+- `failureReasonCodes`
+- `csOfferStatus`
+- `checkedAt`
+
+## ChargingResolutionRecord
+
+Sprint 5 records the resolved charge plan before fulfillment debits.
+
+Key fields:
+
+- `orderId`
+- `totalAmount`
+- `currency`
+- `appliedPriceAlterationId`
+- `appliedDiscount`
+- `chargedAmount`
+- `resolvedFromDefault`
+- `chargeAllocations`
+- `resolvedAt`
+
+Each `chargeAllocation` stores `priority`, `source`, optional `daId`, `allocationAmount`, `status`, and `csTransactionRef`.

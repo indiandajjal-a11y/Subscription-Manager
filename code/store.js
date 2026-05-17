@@ -15,7 +15,9 @@ export function createStore() {
     subscriberAccounts: new Map(),
     channelAuthTokens: new Map(),
     revokedTokens: new Set(), // In-memory revocation cache (cleared on restart)
-    authTokenRateLimitBuckets: new Map()
+    authTokenRateLimitBuckets: new Map(),
+    cancellationEligibilityResults: new Map(),
+    chargingResolutionRecords: new Map()
   };
 }
 
