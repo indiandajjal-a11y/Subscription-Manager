@@ -1,81 +1,175 @@
 # Subscription Manager
 
-Sprint 1 implementation for the ISP Subscription Manager TMF foundation:
+A backend system for managing ISP subscriptions, product catalogs,
+shopping carts, and orders using TMF Open APIs.
 
-- TMF620 `ProductSpecification`, `ProductOffering`, `ProductOfferingPrice`
-- TMF663 `ShoppingCart` and `CartItem`
-- TMF622 `ProductOrder` lifecycle foundation
-- TMF637-style `ProductInventory` records
-- Channel integration foundation for USSD, SMS, CRM, partners, and self-care
+This project implements foundational TMF APIs for telecom subscription
+lifecycle management, supporting extensible integration with channels
+like USSD, SMS, CRM, partners, and self-care platforms.
 
-## Run
+------------------------------------------------------------------------
 
-```powershell
-cd "Subscription Manager"
-npm.cmd start
-```
+## Features
 
-The API listens on `http://localhost:3000` by default. Use `PORT=3001` to change it.
+-   TMF620 Product Catalog (ProductSpecification, ProductOffering,
+    Pricing)
+-   TMF663 Shopping Cart management
+-   TMF622 Product Order lifecycle
+-   TMF637-style Product Inventory
+-   In-memory and PostgreSQL storage support
+-   Modular architecture for multi-channel integration
 
-The default storage mode is in-memory, which is useful for local development and tests.
+------------------------------------------------------------------------
 
-## PostgreSQL
+## Installation
 
-Install dependencies:
-
-```powershell
-cd "C:\Subscription Manager"
+``` powershell
 npm.cmd install
 ```
 
-Create a PostgreSQL database, then apply:
+------------------------------------------------------------------------
 
-```powershell
+## Run
+
+``` powershell
+cd "C:\Subscription Manager"
+npm.cmd start
+```
+
+The API runs on:
+
+    http://localhost:3000
+
+To change port:
+
+``` powershell
+$env:PORT=3001
+```
+
+------------------------------------------------------------------------
+
+## PostgreSQL Setup
+
+### 1. Create database and apply schema
+
+``` powershell
 psql "$env:DATABASE_URL" -f database/001_sprint1_tmf_foundation.sql
 ```
 
-Start with PostgreSQL persistence:
+### 2. Run with PostgreSQL
 
-```powershell
+``` powershell
 $env:DATABASE_URL = "postgres://user:password@localhost:5432/subscription_manager"
 $env:STORAGE_PROVIDER = "postgres"
 npm.cmd start
 ```
 
+------------------------------------------------------------------------
+
 ## Test
 
-PowerShell may block `npm.ps1` on this machine, so the test command can be run directly:
-
-```powershell
-cd "Subscription Manager"
+``` powershell
+cd "C:\Subscription Manager"
 npm.cmd test
 ```
 
-If `npm.cmd` is available:
-
-```powershell
-npm.cmd test
-```
+------------------------------------------------------------------------
 
 ## Configuration
 
-- `SUPPORTED_CURRENCIES`: comma-separated ISO 4217 codes, default `USD,INR,NGN,JPY`
-- `CART_TTL_MINUTES`: default `30`
+-   SUPPORTED_CURRENCIES → default: USD,INR,NGN,JPY
+-   CART_TTL_MINUTES → default: 30
+
+------------------------------------------------------------------------
 
 ## Persistence
 
-The service can run with either in-memory storage or PostgreSQL persistence. The PostgreSQL adapter hydrates the Sprint 1 domain model on startup and writes catalog/cart/order state transactionally after mutating requests.
+Supports: - In-memory storage (default) - PostgreSQL persistence
 
-Project documentation is available in `documentation/`.
+------------------------------------------------------------------------
 
-Key documents:
+## API Examples
 
-- `documentation/installation/INSTALLATION_GUIDE.md`
-- `documentation/release-notes/RELEASE_NOTES_SPRINT_1.md`
-- `documentation/release-notes/RELEASE_NOTES_SPRINT_2.md`
-- `documentation/release-notes/RELEASE_NOTES_SPRINT_3.md`
-- `documentation/technical/ARCHITECTURE.md`
-- `documentation/technical/API_EXAMPLES.md`
-- `documentation/operations/RUNBOOK.md`
-- `documentation/marketing/PRODUCT_OVERVIEW.md`
+### Base URL
 
+    http://localhost:3000
+
+### Create Product Offering
+
+POST /productOffering
+
+``` json
+{
+  "name": "Basic Internet Plan",
+  "description": "Unlimited data plan",
+  "productSpecification": {
+    "id": "spec-001"
+  },
+  "productOfferingPrice": [
+    {
+      "priceType": "recurring",
+      "price": {
+        "amount": 499,
+        "currency": "INR"
+      }
+    }
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+### Create Shopping Cart
+
+POST /shoppingCart
+
+``` json
+{
+  "relatedParty": [
+    {
+      "id": "cust-001",
+      "role": "customer"
+    }
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+### Create Product Order
+
+POST /productOrder
+
+``` json
+{
+  "relatedParty": [
+    {
+      "id": "cust-001",
+      "role": "customer"
+    }
+  ],
+  "orderItem": [
+    {
+      "productOffering": {
+        "id": "off-123"
+      },
+      "quantity": 1
+    }
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+## Project Structure
+
+    code/           
+    database/       
+    documentation/  
+    testing/        
+
+------------------------------------------------------------------------
+
+## License
+
+This project is for educational purposes.
