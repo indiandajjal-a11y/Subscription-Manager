@@ -46,42 +46,52 @@ Pushed tag v3.1
 Working tree is clean.
 I used v3.1 because v3.0 already exists from Sprint 8, and overwriting release tags would be messy history.
 
+Sprint 9/Sprint 5 verification passed, Sprint 10/Sprint 6 prompt had enough context, and I implemented the precise gaps.
+
+What changed:
+
+Added Sprint 6 lifecycle pieces: CustomerSegment routes, segment-aware validation/pricing, CS attribute update client method, renewal schedule helpers, gift order handling, PartyRelationship routes, recipient-aware notification helpers, compensation policy persistence.
+Updated tests and docs under documentation and testing.
+Added consolidated release notes: documentation/release-notes/Subscription_Manager_Release_Notes.md.
+Re-ran tests after migration from E:\Subscription Manager.
+Verification:
+
+npm.cmd test
+98 passing, 0 failures
+Git:
+
+Commit: 7eee27a Implement Sprint 10 lifecycle renewal and gifting
+Tag: v4.0 with message Sprint 10 - stable release
+Pushed main
+Pushed tag v4.0
+Migration:
+
+App migrated to E:\Subscription Manager
+Sprint docs migrated to E:\Solution Documentation
+The original C:\ source directories are now empty, but Windows still has open handles on those folder paths, so it blocked deleting the empty folder shells. The migrated E:\ copies are verified and usable.
 
 
 
 
 
-Verify development for sprint 9 "Sprint_5_AI_Dev_Prompt.md"  test fully and please help check if we have enough tokens for attached file (Sprint 10 "Sprint_6_AI_Dev_Prompt.md"). if no Quit, if yes, lets go ahead and impliment (compare this prompt against what we already built and close any gaps precisely) also update testing and documentation files at the end
+
+
+Verify development for sprint 10 "Sprint_6_AI_Dev_Prompt.md"  test fully and please help check if we have enough tokens for attached file (Sprint 11 "Sprint_7_AI_Dev_Prompt.md"). if no Quit, if yes, lets go ahead and impliment (compare this prompt against what we already built and close any gaps precisely) also update testing and documentation files at the end
 C:\Subscription Manager\documentation
 C:\Subscription Manager\testing
-also update git by adding all changes, Commit with meaningful message, Create a Git tag (VERY important - something like "v4.0 -m "Sprint 10 - stable release ), push the code and lastly push the tag
-Refer to path 
-"C:\Users\Pawan Singhal\AppData\Roaming\TRAE SOLO\ModularData\ai-agent\work-mode-projects\6a09ccba6b71804384d2f7eb" for sprints details 
-path "C:\Subscription Manager" for development and code
+also update git by adding all changes, Commit with meaningful message, Create a Git tag (VERY important - something like "v5.0 -m "Sprint 11 - stable release ), push the code and lastly push the tag
+
+Refer to path "E:\Solution Documentation" for sprints details 
+Refer to path "E:\Subscription Manager" for development and code
 
 Make sure to update below documents
-Name					Folder Path
-README.md				C:\Subscription Manager\documentation\
-INSTALLATION_GUIDE.md	C:\Subscription Manager\documentation\installation\
-PRODUCT_OVERVIEW.md		C:\Subscription Manager\documentation\marketing\
-STAKEHOLDER_SUMMARY.md	C:\Subscription Manager\documentation\marketing\
-RUNBOOK.md				C:\Subscription Manager\documentation\operations\
-API_EXAMPLES.md			C:\Subscription Manager\documentation\technical\
-ARCHITECTURE.md			C:\Subscription Manager\documentation\technical\
-DATA_MODEL.md			C:\Subscription Manager\documentation\technical\
-
-Combine all release notes in single file and keep updating with each sprint (use Subscription Manager release note Vx and update Vx (V1, V2, V3 & so on)
-Name								Folder Path
-RELEASE_NOTES_SPRINT_1.md			C:\Subscription Manager\documentation\release-notes\
-RELEASE_NOTES_SPRINT_2.md			C:\Subscription Manager\documentation\release-notes\
-RELEASE_NOTES_SPRINT_3.md			C:\Subscription Manager\documentation\release-notes\
-RELEASE_NOTES_SPRINT_4.md			C:\Subscription Manager\documentation\release-notes\
-RELEASE_NOTES_SPRINT_5.md			C:\Subscription Manager\documentation\release-notes\
-RELEASE_NOTES_SPRINT_6_STABLE.md	C:\Subscription Manager\documentation\release-notes\
-
-Sprint 10 implementation completed on 2026-05-18.
-Sprint 5 verification: passed as part of full suite.
-Sprint 10 prompt fit in available context and was implemented.
-Full test command: npm.cmd test
-Result: 98 passing tests, 0 failures.
-Key closures: CustomerSegment endpoints, segment-aware validation/pricing, CS attribute update client method, renewal schedule stable states, gift order reason codes, PartyRelationship endpoints, recipient notification helpers, compensation policy persistence, documentation and consolidated release notes.
+Name									Folder Path
+README.md								E:\Subscription Manager\documentation\
+INSTALLATION_GUIDE.md					E:\Subscription Manager\documentation\installation\
+PRODUCT_OVERVIEW.md						E:\Subscription Manager\documentation\marketing\
+STAKEHOLDER_SUMMARY.md					E:\Subscription Manager\documentation\marketing\
+RUNBOOK.md								E:\Subscription Manager\documentation\operations\
+API_EXAMPLES.md							E:\Subscription Manager\documentation\technical\
+ARCHITECTURE.md							E:\Subscription Manager\documentation\technical\
+DATA_MODEL.md							E:\Subscription Manager\documentation\technical\
+Subscription_Manager_Release_Notes.md	E:\Subscription Manager\documentation\release-notes
