@@ -110,6 +110,8 @@ Key fields:
 - `retryCount`
 - `maxRetries`
 - `retryIntervalSeconds`
+- `subscriberAccountId`
+- `subscriptionId`
 
 ## ProductOrderItem
 
@@ -189,6 +191,10 @@ Key fields:
 - `currency`
 - `beneficiaryId`
 - `terminatedAt`
+- `renewalOfferId`
+- `refillId`
+- `notificationFlags`
+- `csAttachmentId`
 
 Statuses:
 
@@ -285,6 +291,8 @@ Key fields:
 - `daBalances`
 - `psoFlags`
 - `offerIds`
+- `expiryDate`
+- `csResponseCode`
 - `csRawResponse`
 
 ## ChannelAuthToken
@@ -299,3 +307,7 @@ Key fields:
 - `expiresAt`
 - `revokedAt`
 - `lastUsedAt`
+
+## Auth Rate Limit Buckets
+
+In-memory token endpoint counters are kept per channel and minute window. They enforce `AUTH_TOKEN_RATE_LIMIT` for Sprint 4 local/runtime behavior and are intentionally not persistent.

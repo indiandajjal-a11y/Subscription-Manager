@@ -8,7 +8,7 @@ Sprint 2 extends the checkout stub into a ProductOrder lifecycle foundation with
 
 Sprint 3 adds ProductInventory creation, compensation/retry hooks, channel integration entry points, terminate-order cancellation, compensation configuration, and notification event placeholders.
 
-Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for live CS validation, and CS-ready account/order validation contracts.
+Sprint 4 adds channel authentication endpoints, optional protected-route enforcement, SubscriberAccount snapshots for live CS validation, and CS-ready account/order validation contracts.
 
 ## Runtime Components
 
@@ -23,6 +23,7 @@ Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for li
 - Defines the REST routing layer
 - Parses JSON requests
 - Applies consistent error envelopes
+- Enforces Sprint 4 JWT/API-key authentication when `ENABLE_AUTH_ENFORCEMENT=true`
 - Saves state after mutating operations when persistence is enabled
 
 `code/domain.js`
@@ -38,7 +39,8 @@ Sprint 4 adds channel authentication helpers, SubscriberAccount snapshots for li
 
 - Provides the Sprint 4 ChargingSystemClient abstraction
 - Uses mock CS behavior when `CS_ENDPOINT_URL` is not configured
-- Contains real-call hooks for GAD/GBAD account fetch and SCAPv2 debit/attach operations
+- Contains real-call hooks for GAD/GBAD account fetch and SCAPv2 debit/attach/remove/credit-back operations
+- Retries configured transient CS responses before returning a failed client result
 
 `code/postgresPersistence.js`
 
@@ -105,12 +107,17 @@ Sprint 3 adds:
 - `POST /api/v1/channels/:channelId/regenerate-key`
 - channel-specific request capture routes for USSD, SMS, and CRM
 
-Sprint 4 domain support adds:
+Sprint 4 adds:
 
+- `POST /api/v1/auth/token`
+- `POST /api/v1/auth/revoke`
+- `GET /api/v1/auth/tokens`
+- `GET /api/v1/orders/:orderId/subscriber-account`
 - Channel API-key creation through `createChannelWithApiKey`
 - JWT issue, validation, revocation, and active-token listing helpers
 - SubscriberAccount snapshots linked to ProductOrder
 - ProductOrder validation using live SubscriberAccount data instead of request-body subscriber attributes
+- `subscriptionId` on completed ProductOrder responses
 
 ## Testing Strategy
 
@@ -121,6 +128,7 @@ Sprint 4 domain support adds:
 `testing/http-api.test.js`
 
 - HTTP-level integration tests against the actual router
+- Sprint 4 auth token endpoint and protected-route checks
 
 `testing/sprint2.test.js`
 
@@ -134,6 +142,7 @@ Sprint 4 domain support adds:
 
 - Channel auth token issue, validation, API key fallback, and revocation tests
 - SubscriberAccount-backed ProductOrder validation tests
+- Token rate limiting, Sprint 4 inventory fields, notification flags, and CS transient retry tests
 
 Run all tests:
 

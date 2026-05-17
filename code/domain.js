@@ -25,7 +25,11 @@ const REQUIRED_CHARACTERISTICS = {
 export function configFromEnv(env = process.env) {
   return {
     cartTtlMinutes: Number(env.CART_TTL_MINUTES || 30),
-    supportedCurrencies: (env.SUPPORTED_CURRENCIES || "USD,INR,NGN,JPY").split(",").map((c) => c.trim().toUpperCase()).filter(Boolean)
+    supportedCurrencies: (env.SUPPORTED_CURRENCIES || "USD,INR,NGN,JPY").split(",").map((c) => c.trim().toUpperCase()).filter(Boolean),
+    enableAuthEnforcement: env.ENABLE_AUTH_ENFORCEMENT === "true",
+    jwtSecret: env.JWT_SECRET || "change-me-in-production",
+    jwtTtlSeconds: Number(env.JWT_TTL_SECONDS || 3600),
+    authTokenRateLimit: Number(env.AUTH_TOKEN_RATE_LIMIT || 10)
   };
 }
 
@@ -587,6 +591,10 @@ export function listProductOrders(db, query = {}) {
 export function getProductOrder(db, orderId) {
   const order = db.productOrders.get(orderId);
   if (!order) fail(404, "ORDER_NOT_FOUND", "ProductOrder was not found.", "orderId");
+  if (!order.subscriptionId) {
+    const inventory = [...db.productInventories.values()].find((item) => item.productOrderId === order.id || item.orderId === order.id);
+    if (inventory) order.subscriptionId = inventory.id;
+  }
   return order;
 }
 
@@ -998,8 +1006,11 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   }
   order.completedAt = nowIso();
   const completed = transitionProductOrder(order, "completed", "Charging and provisioning completed");
-  createProductInventoryRecordsForOrder(db, completed);
-  recordNotification(db, "ORDER_COMPLETED", completed, {});
+  createProductInventoryRecordsForOrder(db, completed, body.inventory || {});
+  const completedInventory = findInventoryForOrder(db, completed.id);
+  if (completedInventory?.notificationFlags?.onActivation !== false) {
+    recordNotification(db, "ORDER_COMPLETED", completed, { inventoryId: completedInventory?.id });
+  }
   return completed;
 }
 
@@ -1071,7 +1082,7 @@ export function retryProductOrderFulfillment(db, orderId, body = {}) {
   return order;
 }
 
-function createProductInventoryRecordsForOrder(db, order) {
+function createProductInventoryRecordsForOrder(db, order, options = {}) {
   if (order.orderType !== "provision") return;
   for (const item of order.items) {
     const exists = [...db.productInventories.values()].some((inventory) => inventory.orderItemId === item.id);
@@ -1080,6 +1091,7 @@ function createProductInventoryRecordsForOrder(db, order) {
     const startDate = (order.completedAt || timestamp).slice(0, 10);
     const endDateIso = inventoryExpiryForOffering(db, item.productOfferingId);
     const debitStep = order.fulfillmentSteps.find((step) => step.stepName === "debit" && step.status === "success");
+    const attachStep = order.fulfillmentSteps.find((step) => step.stepName === "attachOffer" && step.status === "success");
     const inventory = {
       id: randomUUID(),
       productOrderId: order.id,
@@ -1099,6 +1111,15 @@ function createProductInventoryRecordsForOrder(db, order) {
       amountCharged: item.pricedAmount,
       currency: item.pricedCurrency || order.currency,
       beneficiaryId: item.beneficiaryId || null,
+      renewalOfferId: options.renewalOfferId || item.renewalOfferId || null,
+      refillId: options.refillId || item.refillId || null,
+      notificationFlags: {
+        onActivation: options.notificationFlags?.onActivation ?? true,
+        onRenewal: options.notificationFlags?.onRenewal ?? true,
+        onExpiry: options.notificationFlags?.onExpiry ?? true,
+        onFailure: options.notificationFlags?.onFailure ?? true
+      },
+      csAttachmentId: options.csAttachmentId || attachStep?.responsePayload?.attachmentId || null,
       activatedAt: timestamp,
       expiresAt: endDateIso,
       terminatedAt: null,
@@ -1106,6 +1127,7 @@ function createProductInventoryRecordsForOrder(db, order) {
       updatedAt: timestamp
     };
     db.productInventories.set(inventory.id, inventory);
+    order.subscriptionId = order.subscriptionId || inventory.id;
   }
 }
 
@@ -1393,9 +1415,19 @@ function hashToken(token) {
 export function issueChannelAuthToken(db, body = {}, config = {}) {
   const jwtSecret = config.jwtSecret || process.env.JWT_SECRET || "change-me-in-production";
   const jwtTtlSeconds = Number(config.jwtTtlSeconds || process.env.JWT_TTL_SECONDS || 3600);
+  const rateLimit = Number(config.authTokenRateLimit || process.env.AUTH_TOKEN_RATE_LIMIT || 10);
 
   assertRequired(body.channelId, "channelId");
   assertRequired(body.apiKey, "apiKey");
+
+  if (!db.authTokenRateLimitBuckets) db.authTokenRateLimitBuckets = new Map();
+  const minuteWindow = Math.floor(Date.now() / 60000);
+  const bucketKey = `${body.channelId}:${minuteWindow}`;
+  const bucketCount = db.authTokenRateLimitBuckets.get(bucketKey) || 0;
+  if (bucketCount >= rateLimit) {
+    fail(429, "RATE_LIMIT_EXCEEDED", "Token request rate limit exceeded.", "authorization");
+  }
+  db.authTokenRateLimitBuckets.set(bucketKey, bucketCount + 1);
 
   // Find channel by channelId short name or channel name
   const channel = [...db.channels.values()].find(
@@ -1570,6 +1602,8 @@ export function createSubscriberAccountSnapshot(db, orderId, csData) {
  */
 export function getSubscriberAccountByOrder(db, orderId) {
   if (!db.subscriberAccounts) return null;
+  const order = db.productOrders.get(orderId);
+  if (order?.subscriberAccountId) return db.subscriberAccounts.get(order.subscriberAccountId) || null;
   return [...db.subscriberAccounts.values()].find((a) => a.orderId === orderId) || null;
 }
 

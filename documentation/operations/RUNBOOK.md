@@ -64,9 +64,35 @@ Check PostgreSQL connection string:
 $env:DATABASE_URL
 ```
 
-## Known Sprint 1 Limitations
+## Sprint 4 Auth And CS Settings
 
-- No authentication or authorization
-- No charging integration
-- No provisioning integration
+Enable protected subscription routes:
+
+```powershell
+$env:ENABLE_AUTH_ENFORCEMENT = "true"
+```
+
+JWT and token rate settings:
+
+```powershell
+$env:JWT_SECRET = "replace-with-a-strong-secret"
+$env:JWT_TTL_SECONDS = "3600"
+$env:AUTH_TOKEN_RATE_LIMIT = "10"
+```
+
+Charging System adapter settings:
+
+```powershell
+$env:CS_ENDPOINT_URL = "https://charging-system.example"
+$env:CS_TIMEOUT_MS = "5000"
+$env:CS_TRANSIENT_ERROR_CODES = "500,502,503,504"
+$env:CS_CLIENT_RETRY_COUNT = "2"
+```
+
+If `CS_ENDPOINT_URL` is not set, the Sprint 4 CS client uses local mock responses.
+
+## Known Limitations
+
 - PostgreSQL adapter writes full Sprint 1 state after mutations; this is acceptable for Sprint 1 scale but should be replaced by per-aggregate repositories in later sprints.
+- Token revocation cache is in memory and does not survive process restarts.
+- Production CS wire-protocol hardening remains vendor-specific integration work.

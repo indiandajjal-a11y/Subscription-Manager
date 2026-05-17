@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { createHandler } from "../code/app.js";
 import { createStore } from "../code/store.js";
+import { createChannel } from "../code/domain.js";
 
 const characteristics = [
   { name: "dataVolume", valueType: "number", value: "5", unit: "GB" },
@@ -11,21 +12,22 @@ const characteristics = [
   { name: "neaActivationRequired", valueType: "boolean", value: "true" }
 ];
 
-async function withServer(fn) {
-  const server = http.createServer(createHandler(createStore()));
+async function withServer(fn, options = {}) {
+  const db = options.db || createStore();
+  const server = http.createServer(createHandler(db, options.config));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
   try {
-    await fn(`http://127.0.0.1:${port}`);
+    await fn(`http://127.0.0.1:${port}`, db);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 }
 
-async function request(baseUrl, method, path, body) {
+async function request(baseUrl, method, path, body, headers = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: body ? { "content-type": "application/json", ...headers } : headers,
     body: body ? JSON.stringify(body) : undefined
   });
   const text = await response.text();
@@ -167,5 +169,53 @@ test("HTTP Sprint 3 channel request can create order and inventory", async () =>
     const inventoryResponse = await request(baseUrl, "GET", "/api/v1/inventory?subscriberId=2348012345678");
     assert.equal(inventoryResponse.status, 200);
     assert.equal(inventoryResponse.body.length, 1);
+  });
+});
+
+test("HTTP Sprint 4 auth endpoint issues tokens and protects subscription routes", async () => {
+  const db = createStore();
+  const channel = createChannel(db, {
+      name: "USSD",
+      channelId: "USSD",
+      type: "USSD"
+    });
+  await withServer(async (baseUrl) => {
+    const missingToken = await request(baseUrl, "POST", "/api/v1/cart", {
+      channelId: "USSD",
+      subscriberId: "2348012345678",
+      currency: "NGN"
+    });
+    assert.equal(missingToken.status, 401);
+    assert.equal(missingToken.body.error.details[0].reasonCode, "MISSING_TOKEN");
+
+    const tokenResponse = await request(baseUrl, "POST", "/api/v1/auth/token", {
+      channelId: "USSD",
+      apiKey: channel.apiKey
+    });
+    assert.equal(tokenResponse.status, 200);
+    assert.equal(tokenResponse.body.tokenType, "Bearer");
+
+    const authHeaders = { authorization: `Bearer ${tokenResponse.body.accessToken}` };
+    const mismatch = await request(baseUrl, "POST", "/api/v1/cart", {
+      channelId: "SMS",
+      subscriberId: "2348012345678",
+      currency: "NGN"
+    }, authHeaders);
+    assert.equal(mismatch.status, 403);
+    assert.equal(mismatch.body.error.details[0].reasonCode, "CHANNEL_MISMATCH");
+
+    const cartResponse = await request(baseUrl, "POST", "/api/v1/cart", {
+      channelId: "USSD",
+      subscriberId: "2348012345678",
+      currency: "NGN"
+    }, authHeaders);
+    assert.equal(cartResponse.status, 201);
+  }, {
+    db,
+    config: {
+      enableAuthEnforcement: true,
+      jwtSecret: "http-test-secret",
+      jwtTtlSeconds: 60
+    }
   });
 });
