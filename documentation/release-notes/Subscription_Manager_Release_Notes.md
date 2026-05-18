@@ -32,3 +32,13 @@
 - Added gift order validation, sponsor/beneficiary PartyRelationship records, and recipient-aware NotificationEvent helpers.
 - Added per-offering compensation policy persistence and retry tracking.
 - Verified full suite: 98 passing tests, 0 failures.
+
+## V7 - Sprint 7 Stable
+
+- Added CommunicationTemplate management, template selection, placeholder rendering, math expression handling, date formatting, and SMS truncation.
+- Added NotificationDispatchRecord audit history and notification dispatch endpoint.
+- Added CurrencyConfig management with default currency support and currency-aware price validation.
+- Added combined `POST /api/v1/cart/:cartId/subscribe` channel flow.
+- Added StaffNumberLink management and STAFF segment override for linked secondary numbers.
+- Addressed Sonar major findings for inline route assignments, duplicate mock CS methods, non-Error throws, and nested ternaries.
+- Verified full suite: 105 passing tests, 0 failures.

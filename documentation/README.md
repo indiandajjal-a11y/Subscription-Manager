@@ -20,11 +20,14 @@ Sprint 4 adds channel authentication endpoints, optional protected-route enforce
 
 Sprint 5 adds subscription cancellation business rules, termination audit fields, and advanced charging resolution for fallback, partial charging, defaults, and CS-attribute discounts.
 
-Sprint 6 stable verification now closes the lifecycle, renewal, gifting, segment, CS attribute update, and configurable compensation gaps from the Sprint 10 prompt.
+Sprint 6 stable verification closes the lifecycle, renewal, gifting, segment, CS attribute update, and configurable compensation gaps from the Sprint 10 prompt.
+
+Sprint 7 adds the Sprint 11 notification and presentation layer: communication templates, dispatch records, live-balance placeholder rendering, SMS/USSD channel formatting, currency configuration, combined USSD/SMS subscribe flow, and staff secondary-number linking.
 
 Current stable scope:
 
 - Sprint 5 cancellation and advanced charging are verified by the full test suite.
 - Sprint 6 adds CustomerSegment resolution, `resolvedSegmentId` snapshots, customer-segment eligibility/discount support, CS attribute update configuration, renewal schedule helpers, gift order validation, PartyRelationship records, recipient-aware notifications, and per-offering compensation policy defaults.
 - Sprint 6 API coverage includes CustomerSegment, RenewalSchedule, and PartyRelationship routes.
-- Automated verification: `npm.cmd test` passes all 98 tests.
+- Sprint 7 API coverage includes template management, dispatch records, currency configuration, staff links, and combined cart subscription.
+- Automated verification: `npm.cmd test` passes all 105 tests.

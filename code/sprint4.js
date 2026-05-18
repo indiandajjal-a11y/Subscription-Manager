@@ -219,7 +219,8 @@ export class RealChargingSystemClient {
     return {
       transactionId: randomUUID(),
       status: "success",
-      failureReason: null
+      failureReason: null,
+      originalTransactionRef: params.originalTransactionRef || params.transactionRef || null
     };
   }
 
@@ -705,7 +706,7 @@ function decodeJwt(token) {
     const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
     return payload;
   } catch {
-    throw { status: 401, reasonCode: "INVALID_TOKEN", message: "Invalid JWT format" };
+    fail(401, "INVALID_TOKEN", "Invalid JWT format", "authorization");
   }
 }
 

@@ -7,19 +7,61 @@
         "pageSize": 100,
         "total": 77
     },
-    "effortTotal": 651,
+    "effortTotal": 649,
     "issues": [
+        {
+            "key": "df4f12ad-7b12-4a94-8585-930053235fd1",
+            "rule": "javascript:S1121",
+            "severity": "MAJOR",
+            "component": "subscription-manager:code/app.js",
+            "project": "subscription-manager",
+            "line": 233,
+            "hash": "d18496ac2cc8e862bf42cc7a66860520",
+            "textRange": {
+                "startLine": 233,
+                "endLine": 233,
+                "startOffset": 18,
+                "endOffset": 19
+            },
+            "flows": [],
+            "status": "OPEN",
+            "message": "Extract the assignment of \"params\" from this expression.",
+            "effort": "5min",
+            "debt": "5min",
+            "author": "pawansinghal007@gmail.com",
+            "tags": [
+                "cwe",
+                "suspicious"
+            ],
+            "creationDate": "2026-05-18T01:51:36+0000",
+            "updateDate": "2026-05-18T01:51:36+0000",
+            "type": "CODE_SMELL",
+            "scope": "MAIN",
+            "quickFixAvailable": false,
+            "messageFormattings": [],
+            "codeVariants": [],
+            "cleanCodeAttribute": "CLEAR",
+            "cleanCodeAttributeCategory": "INTENTIONAL",
+            "impacts": [
+                {
+                    "softwareQuality": "MAINTAINABILITY",
+                    "severity": "MEDIUM"
+                }
+            ],
+            "issueStatus": "OPEN",
+            "prioritizedRule": false
+        },
         {
             "key": "d30d91c9-4bf9-4e93-861f-7adad62ef0be",
             "rule": "javascript:S3776",
             "severity": "CRITICAL",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 176,
+            "line": 194,
             "hash": "e66928b0332130a5dc4bf811c5cd29cf",
             "textRange": {
-                "startLine": 176,
-                "endLine": 176,
+                "startLine": 194,
+                "endLine": 194,
                 "startOffset": 15,
                 "endOffset": 23
             },
@@ -29,8 +71,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 183,
-                                "endLine": 183,
+                                "startLine": 201,
+                                "endLine": 201,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -44,8 +86,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 183,
-                                "endLine": 183,
+                                "startLine": 201,
+                                "endLine": 201,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -59,8 +101,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 185,
-                                "endLine": 185,
+                                "startLine": 203,
+                                "endLine": 203,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -74,8 +116,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 185,
-                                "endLine": 185,
+                                "startLine": 203,
+                                "endLine": 203,
                                 "startOffset": 45,
                                 "endOffset": 47
                             },
@@ -89,8 +131,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 189,
-                                "endLine": 189,
+                                "startLine": 207,
+                                "endLine": 207,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -104,130 +146,10 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 189,
-                                "endLine": 189,
+                                "startLine": 207,
+                                "endLine": 207,
                                 "startOffset": 28,
                                 "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 194,
-                                "endLine": 194,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 194,
-                                "endLine": 194,
-                                "startOffset": 28,
-                                "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 200,
-                                "endLine": 200,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 200,
-                                "endLine": 200,
-                                "startOffset": 27,
-                                "endOffset": 29
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 204,
-                                "endLine": 204,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 204,
-                                "endLine": 204,
-                                "startOffset": 28,
-                                "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 209,
-                                "endLine": 209,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 209,
-                                "endLine": 209,
-                                "startOffset": 27,
-                                "endOffset": 29
                             },
                             "msg": "+1",
                             "msgFormattings": []
@@ -254,68 +176,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 215,
-                                "endLine": 215,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 220,
-                                "endLine": 220,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 225,
-                                "endLine": 225,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 231,
-                                "endLine": 231,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 231,
-                                "endLine": 231,
+                                "startLine": 212,
+                                "endLine": 212,
                                 "startOffset": 28,
                                 "endOffset": 30
                             },
@@ -329,8 +191,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 236,
-                                "endLine": 236,
+                                "startLine": 218,
+                                "endLine": 218,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -344,8 +206,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 236,
-                                "endLine": 236,
+                                "startLine": 218,
+                                "endLine": 218,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -359,8 +221,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 241,
-                                "endLine": 241,
+                                "startLine": 222,
+                                "endLine": 222,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -374,8 +236,23 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 246,
-                                "endLine": 246,
+                                "startLine": 227,
+                                "endLine": 227,
+                                "startOffset": 0,
+                                "endOffset": 2
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 230,
+                                "endLine": 230,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -389,8 +266,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 251,
-                                "endLine": 251,
+                                "startLine": 233,
+                                "endLine": 233,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -404,8 +281,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 256,
-                                "endLine": 256,
+                                "startLine": 238,
+                                "endLine": 238,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -419,8 +296,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 261,
-                                "endLine": 261,
+                                "startLine": 243,
+                                "endLine": 243,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -434,8 +311,83 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 266,
-                                "endLine": 266,
+                                "startLine": 249,
+                                "endLine": 249,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 249,
+                                "endLine": 249,
+                                "startOffset": 28,
+                                "endOffset": 30
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 254,
+                                "endLine": 254,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 254,
+                                "endLine": 254,
+                                "startOffset": 27,
+                                "endOffset": 29
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 259,
+                                "endLine": 259,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 264,
+                                "endLine": 264,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -479,8 +431,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 277,
-                                "endLine": 277,
+                                "startLine": 279,
+                                "endLine": 279,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -494,8 +446,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 280,
-                                "endLine": 280,
+                                "startLine": 284,
+                                "endLine": 284,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -509,8 +461,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 285,
-                                "endLine": 285,
+                                "startLine": 287,
+                                "endLine": 287,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -524,8 +476,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 290,
-                                "endLine": 290,
+                                "startLine": 292,
+                                "endLine": 292,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -554,8 +506,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 301,
-                                "endLine": 301,
+                                "startLine": 298,
+                                "endLine": 298,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -569,8 +521,68 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 301,
-                                "endLine": 301,
+                                "startLine": 303,
+                                "endLine": 303,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 308,
+                                "endLine": 308,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 313,
+                                "endLine": 313,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 319,
+                                "endLine": 319,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 319,
+                                "endLine": 319,
                                 "startOffset": 28,
                                 "endOffset": 30
                             },
@@ -584,8 +596,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 306,
-                                "endLine": 306,
+                                "startLine": 324,
+                                "endLine": 324,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -599,8 +611,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 306,
-                                "endLine": 306,
+                                "startLine": 324,
+                                "endLine": 324,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -614,70 +626,10 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 309,
-                                "endLine": 309,
+                                "startLine": 327,
+                                "endLine": 327,
                                 "startOffset": 6,
                                 "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 312,
-                                "endLine": 312,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 317,
-                                "endLine": 317,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 323,
-                                "endLine": 323,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 323,
-                                "endLine": 323,
-                                "startOffset": 28,
-                                "endOffset": 30
                             },
                             "msg": "+1",
                             "msgFormattings": []
@@ -719,8 +671,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 344,
-                                "endLine": 344,
+                                "startLine": 341,
+                                "endLine": 341,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -734,113 +686,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 350,
-                                "endLine": 350,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 354,
-                                "endLine": 354,
-                                "startOffset": 8,
-                                "endOffset": 10
-                            },
-                            "msg": "+2 (incl. 1 for nesting)",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 370,
-                                "endLine": 370,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 376,
-                                "endLine": 376,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 382,
-                                "endLine": 382,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 382,
-                                "endLine": 382,
-                                "startOffset": 27,
-                                "endOffset": 29
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 385,
-                                "endLine": 385,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 385,
-                                "endLine": 385,
+                                "startLine": 341,
+                                "endLine": 341,
                                 "startOffset": 28,
                                 "endOffset": 30
                             },
@@ -854,8 +701,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 390,
-                                "endLine": 390,
+                                "startLine": 348,
+                                "endLine": 348,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -869,8 +716,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 393,
-                                "endLine": 393,
+                                "startLine": 353,
+                                "endLine": 353,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -884,10 +731,100 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 398,
-                                "endLine": 398,
+                                "startLine": 362,
+                                "endLine": 362,
                                 "startOffset": 6,
                                 "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 368,
+                                "endLine": 368,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 372,
+                                "endLine": 372,
+                                "startOffset": 8,
+                                "endOffset": 10
+                            },
+                            "msg": "+2 (incl. 1 for nesting)",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 388,
+                                "endLine": 388,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 394,
+                                "endLine": 394,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 400,
+                                "endLine": 400,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 400,
+                                "endLine": 400,
+                                "startOffset": 27,
+                                "endOffset": 29
                             },
                             "msg": "+1",
                             "msgFormattings": []
@@ -914,12 +851,12 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 406,
-                                "endLine": 406,
-                                "startOffset": 52,
-                                "endOffset": 53
+                                "startLine": 403,
+                                "endLine": 403,
+                                "startOffset": 28,
+                                "endOffset": 30
                             },
-                            "msg": "+2 (incl. 1 for nesting)",
+                            "msg": "+1",
                             "msgFormattings": []
                         }
                     ]
@@ -944,8 +881,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 413,
-                                "endLine": 413,
+                                "startLine": 411,
+                                "endLine": 411,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -959,8 +896,23 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 418,
-                                "endLine": 418,
+                                "startLine": 416,
+                                "endLine": 416,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 421,
+                                "endLine": 421,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -976,6 +928,21 @@
                             "textRange": {
                                 "startLine": 424,
                                 "endLine": 424,
+                                "startOffset": 52,
+                                "endOffset": 53
+                            },
+                            "msg": "+2 (incl. 1 for nesting)",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 426,
+                                "endLine": 426,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -989,8 +956,53 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 424,
-                                "endLine": 424,
+                                "startLine": 431,
+                                "endLine": 431,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 436,
+                                "endLine": 436,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 442,
+                                "endLine": 442,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 442,
+                                "endLine": 442,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -1004,68 +1016,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 427,
-                                "endLine": 427,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 427,
-                                "endLine": 427,
-                                "startOffset": 28,
-                                "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 430,
-                                "endLine": 430,
-                                "startOffset": 10,
-                                "endOffset": 11
-                            },
-                            "msg": "+2 (incl. 1 for nesting)",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 435,
-                                "endLine": 435,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 440,
-                                "endLine": 440,
+                                "startLine": 445,
+                                "endLine": 445,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1081,6 +1033,21 @@
                             "textRange": {
                                 "startLine": 445,
                                 "endLine": 445,
+                                "startOffset": 28,
+                                "endOffset": 30
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 448,
+                                "endLine": 448,
                                 "startOffset": 10,
                                 "endOffset": 11
                             },
@@ -1094,8 +1061,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 450,
-                                "endLine": 450,
+                                "startLine": 453,
+                                "endLine": 453,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1109,42 +1076,27 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 455,
-                                "endLine": 455,
-                                "startOffset": 52,
-                                "endOffset": 53
+                                "startLine": 458,
+                                "endLine": 458,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 463,
+                                "endLine": 463,
+                                "startOffset": 10,
+                                "endOffset": 11
                             },
                             "msg": "+2 (incl. 1 for nesting)",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 457,
-                                "endLine": 457,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 462,
-                                "endLine": 462,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
                             "msgFormattings": []
                         }
                     ]
@@ -1169,10 +1121,10 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 472,
-                                "endLine": 472,
-                                "startOffset": 8,
-                                "endOffset": 10
+                                "startLine": 473,
+                                "endLine": 473,
+                                "startOffset": 52,
+                                "endOffset": 53
                             },
                             "msg": "+2 (incl. 1 for nesting)",
                             "msgFormattings": []
@@ -1199,40 +1151,10 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 479,
-                                "endLine": 479,
-                                "startOffset": 8,
-                                "endOffset": 10
-                            },
-                            "msg": "+2 (incl. 1 for nesting)",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 483,
-                                "endLine": 483,
+                                "startLine": 480,
+                                "endLine": 480,
                                 "startOffset": 6,
                                 "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 483,
-                                "endLine": 483,
-                                "startOffset": 27,
-                                "endOffset": 29
                             },
                             "msg": "+1",
                             "msgFormattings": []
@@ -1259,12 +1181,12 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 489,
-                                "endLine": 489,
-                                "startOffset": 6,
-                                "endOffset": 8
+                                "startLine": 490,
+                                "endLine": 490,
+                                "startOffset": 8,
+                                "endOffset": 10
                             },
-                            "msg": "+1",
+                            "msg": "+2 (incl. 1 for nesting)",
                             "msgFormattings": []
                         }
                     ]
@@ -1274,23 +1196,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 492,
-                                "endLine": 492,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 497,
-                                "endLine": 497,
+                                "startLine": 493,
+                                "endLine": 493,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1306,10 +1213,10 @@
                             "textRange": {
                                 "startLine": 497,
                                 "endLine": 497,
-                                "startOffset": 27,
-                                "endOffset": 29
+                                "startOffset": 8,
+                                "endOffset": 10
                             },
-                            "msg": "+1",
+                            "msg": "+2 (incl. 1 for nesting)",
                             "msgFormattings": []
                         }
                     ]
@@ -1319,8 +1226,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 500,
-                                "endLine": 500,
+                                "startLine": 501,
+                                "endLine": 501,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1334,8 +1241,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 500,
-                                "endLine": 500,
+                                "startLine": 501,
+                                "endLine": 501,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -1364,21 +1271,6 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 504,
-                                "endLine": 504,
-                                "startOffset": 27,
-                                "endOffset": 29
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
                                 "startLine": 507,
                                 "endLine": 507,
                                 "startOffset": 6,
@@ -1394,23 +1286,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 507,
-                                "endLine": 507,
-                                "startOffset": 28,
-                                "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 512,
-                                "endLine": 512,
+                                "startLine": 510,
+                                "endLine": 510,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1439,23 +1316,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 521,
-                                "endLine": 521,
-                                "startOffset": 6,
-                                "endOffset": 8
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 521,
-                                "endLine": 521,
+                                "startLine": 515,
+                                "endLine": 515,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -1469,8 +1331,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 524,
-                                "endLine": 524,
+                                "startLine": 518,
+                                "endLine": 518,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1484,8 +1346,68 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 524,
-                                "endLine": 524,
+                                "startLine": 518,
+                                "endLine": 518,
+                                "startOffset": 27,
+                                "endOffset": 29
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 522,
+                                "endLine": 522,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 522,
+                                "endLine": 522,
+                                "startOffset": 27,
+                                "endOffset": 29
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 525,
+                                "endLine": 525,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 525,
+                                "endLine": 525,
                                 "startOffset": 28,
                                 "endOffset": 30
                             },
@@ -1499,8 +1421,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 529,
-                                "endLine": 529,
+                                "startLine": 530,
+                                "endLine": 530,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1529,23 +1451,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 533,
-                                "endLine": 533,
-                                "startOffset": 28,
-                                "endOffset": 30
-                            },
-                            "msg": "+1",
-                            "msgFormattings": []
-                        }
-                    ]
-                },
-                {
-                    "locations": [
-                        {
-                            "component": "subscription-manager:code/app.js",
-                            "textRange": {
-                                "startLine": 538,
-                                "endLine": 538,
+                                "startLine": 539,
+                                "endLine": 539,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1559,8 +1466,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 538,
-                                "endLine": 538,
+                                "startLine": 539,
+                                "endLine": 539,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -1574,8 +1481,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 541,
-                                "endLine": 541,
+                                "startLine": 542,
+                                "endLine": 542,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1589,8 +1496,23 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 544,
-                                "endLine": 544,
+                                "startLine": 542,
+                                "endLine": 542,
+                                "startOffset": 28,
+                                "endOffset": 30
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 547,
+                                "endLine": 547,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1604,8 +1526,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 549,
-                                "endLine": 549,
+                                "startLine": 551,
+                                "endLine": 551,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1619,10 +1541,40 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 554,
-                                "endLine": 554,
+                                "startLine": 551,
+                                "endLine": 551,
+                                "startOffset": 28,
+                                "endOffset": 30
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 556,
+                                "endLine": 556,
                                 "startOffset": 6,
                                 "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 556,
+                                "endLine": 556,
+                                "startOffset": 27,
+                                "endOffset": 29
                             },
                             "msg": "+1",
                             "msgFormattings": []
@@ -1649,8 +1601,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 564,
-                                "endLine": 564,
+                                "startLine": 562,
+                                "endLine": 562,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1664,8 +1616,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 569,
-                                "endLine": 569,
+                                "startLine": 567,
+                                "endLine": 567,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1679,8 +1631,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 574,
-                                "endLine": 574,
+                                "startLine": 572,
+                                "endLine": 572,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1694,8 +1646,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 579,
-                                "endLine": 579,
+                                "startLine": 577,
+                                "endLine": 577,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1709,8 +1661,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 584,
-                                "endLine": 584,
+                                "startLine": 582,
+                                "endLine": 582,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1724,8 +1676,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 589,
-                                "endLine": 589,
+                                "startLine": 587,
+                                "endLine": 587,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1739,8 +1691,68 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 589,
-                                "endLine": 589,
+                                "startLine": 592,
+                                "endLine": 592,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 597,
+                                "endLine": 597,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 602,
+                                "endLine": 602,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 607,
+                                "endLine": 607,
+                                "startOffset": 6,
+                                "endOffset": 8
+                            },
+                            "msg": "+1",
+                            "msgFormattings": []
+                        }
+                    ]
+                },
+                {
+                    "locations": [
+                        {
+                            "component": "subscription-manager:code/app.js",
+                            "textRange": {
+                                "startLine": 607,
+                                "endLine": 607,
                                 "startOffset": 27,
                                 "endOffset": 29
                             },
@@ -1754,8 +1766,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 594,
-                                "endLine": 594,
+                                "startLine": 612,
+                                "endLine": 612,
                                 "startOffset": 6,
                                 "endOffset": 11
                             },
@@ -1769,8 +1781,8 @@
                         {
                             "component": "subscription-manager:code/app.js",
                             "textRange": {
-                                "startLine": 595,
-                                "endLine": 595,
+                                "startLine": 613,
+                                "endLine": 613,
                                 "startOffset": 6,
                                 "endOffset": 8
                             },
@@ -1781,15 +1793,15 @@
                 }
             ],
             "status": "OPEN",
-            "message": "Refactor this function to reduce its Cognitive Complexity from 125 to the 15 allowed.",
-            "effort": "1h55min",
-            "debt": "1h55min",
+            "message": "Refactor this function to reduce its Cognitive Complexity from 123 to the 15 allowed.",
+            "effort": "1h53min",
+            "debt": "1h53min",
             "author": "pawansinghal007@gmail.com",
             "tags": [
                 "brain-overload"
             ],
             "creationDate": "2026-05-17T21:40:29+0000",
-            "updateDate": "2026-05-17T23:13:39+0000",
+            "updateDate": "2026-05-18T01:51:36+0000",
             "type": "CODE_SMELL",
             "scope": "MAIN",
             "quickFixAvailable": false,
@@ -1812,11 +1824,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 309,
+            "line": 327,
             "hash": "51e81cfdabe9f821e5459c91372d130c",
             "textRange": {
-                "startLine": 309,
-                "endLine": 309,
+                "startLine": 327,
+                "endLine": 327,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -1854,11 +1866,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 312,
+            "line": 330,
             "hash": "b9c2f1fe7434dcbf48711bbb8aa5e2c2",
             "textRange": {
-                "startLine": 312,
-                "endLine": 312,
+                "startLine": 330,
+                "endLine": 330,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -1896,11 +1908,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 317,
+            "line": 335,
             "hash": "23f0dd4c92fd188ddd35fd1ab9ed8e15",
             "textRange": {
-                "startLine": 317,
-                "endLine": 317,
+                "startLine": 335,
+                "endLine": 335,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -1938,11 +1950,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 512,
+            "line": 530,
             "hash": "d91548d9eff75ea78bfb78347d26bf84",
             "textRange": {
-                "startLine": 512,
-                "endLine": 512,
+                "startLine": 530,
+                "endLine": 530,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -1980,11 +1992,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 515,
+            "line": 533,
             "hash": "0e2cd48838cb0612f3b6fe01fbdf3d2e",
             "textRange": {
-                "startLine": 515,
-                "endLine": 515,
+                "startLine": 533,
+                "endLine": 533,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -2022,11 +2034,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 529,
+            "line": 547,
             "hash": "a5a49a7d56d98cc82ef27f09d2420093",
             "textRange": {
-                "startLine": 529,
-                "endLine": 529,
+                "startLine": 547,
+                "endLine": 547,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -2635,11 +2647,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 277,
+            "line": 295,
             "hash": "af0da96a680a4c1e2c2a4db5d594715d",
             "textRange": {
-                "startLine": 277,
-                "endLine": 277,
+                "startLine": 295,
+                "endLine": 295,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -2677,11 +2689,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 280,
+            "line": 298,
             "hash": "42db48aa1dd052da40ab7eb1b6975c53",
             "textRange": {
-                "startLine": 280,
-                "endLine": 280,
+                "startLine": 298,
+                "endLine": 298,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -2719,11 +2731,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 475,
+            "line": 493,
             "hash": "67f42be2cf8153fc67469136850eaead",
             "textRange": {
-                "startLine": 475,
-                "endLine": 475,
+                "startLine": 493,
+                "endLine": 493,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -2761,11 +2773,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 489,
+            "line": 507,
             "hash": "dcb47cada388ba6d6e6ebc343b7f48b6",
             "textRange": {
-                "startLine": 489,
-                "endLine": 489,
+                "startLine": 507,
+                "endLine": 507,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -4791,11 +4803,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 468,
+            "line": 486,
             "hash": "727aad4d6b8dcd3b55008b729a185f5a",
             "textRange": {
-                "startLine": 468,
-                "endLine": 468,
+                "startLine": 486,
+                "endLine": 486,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -4833,11 +4845,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 261,
+            "line": 279,
             "hash": "50aee4d8c3055aef76a084659731e81e",
             "textRange": {
-                "startLine": 261,
-                "endLine": 261,
+                "startLine": 279,
+                "endLine": 279,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -4875,11 +4887,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 266,
+            "line": 284,
             "hash": "a20c8735e72d8fb6bb9ef3f18edc1025",
             "textRange": {
-                "startLine": 266,
-                "endLine": 266,
+                "startLine": 284,
+                "endLine": 284,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -4917,11 +4929,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 462,
+            "line": 480,
             "hash": "cf87e6785adcc9618467210256ab9369",
             "textRange": {
-                "startLine": 462,
-                "endLine": 462,
+                "startLine": 480,
+                "endLine": 480,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -4959,11 +4971,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 492,
+            "line": 510,
             "hash": "2e8ec630c3b9ef1f85d4dad7782971f5",
             "textRange": {
-                "startLine": 492,
-                "endLine": 492,
+                "startLine": 510,
+                "endLine": 510,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5001,11 +5013,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 549,
+            "line": 567,
             "hash": "03456365adf8b9c244b6d530a60577a1",
             "textRange": {
-                "startLine": 549,
-                "endLine": 549,
+                "startLine": 567,
+                "endLine": 567,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5043,11 +5055,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 554,
+            "line": 572,
             "hash": "8d7d1085d0d5b53ec4fac406b43bddb6",
             "textRange": {
-                "startLine": 554,
-                "endLine": 554,
+                "startLine": 572,
+                "endLine": 572,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5085,11 +5097,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 559,
+            "line": 577,
             "hash": "a109b3842ac7806dae8a688ebf580375",
             "textRange": {
-                "startLine": 559,
-                "endLine": 559,
+                "startLine": 577,
+                "endLine": 577,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5548,53 +5560,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 212,
+            "line": 230,
             "hash": "96367e435827d7e70070cc92750a6a1d",
             "textRange": {
-                "startLine": 212,
-                "endLine": 212,
-                "startOffset": 18,
-                "endOffset": 19
-            },
-            "flows": [],
-            "status": "OPEN",
-            "message": "Extract the assignment of \"params\" from this expression.",
-            "effort": "5min",
-            "debt": "5min",
-            "author": "pawansinghal007@gmail.com",
-            "tags": [
-                "cwe",
-                "suspicious"
-            ],
-            "creationDate": "2026-05-17T17:23:22+0000",
-            "updateDate": "2026-05-17T23:13:39+0000",
-            "type": "CODE_SMELL",
-            "scope": "MAIN",
-            "quickFixAvailable": false,
-            "messageFormattings": [],
-            "codeVariants": [],
-            "cleanCodeAttribute": "CLEAR",
-            "cleanCodeAttributeCategory": "INTENTIONAL",
-            "impacts": [
-                {
-                    "softwareQuality": "MAINTAINABILITY",
-                    "severity": "MEDIUM"
-                }
-            ],
-            "issueStatus": "OPEN",
-            "prioritizedRule": false
-        },
-        {
-            "key": "0300bf89-d581-42ff-ac7f-63aefbb582d3",
-            "rule": "javascript:S1121",
-            "severity": "MAJOR",
-            "component": "subscription-manager:code/app.js",
-            "project": "subscription-manager",
-            "line": 215,
-            "hash": "8d109481dc0ebdc11bbf72cb11ba8b0d",
-            "textRange": {
-                "startLine": 215,
-                "endLine": 215,
+                "startLine": 230,
+                "endLine": 230,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5632,11 +5602,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 220,
+            "line": 238,
             "hash": "6de00e8efd553bbeff92d4c3e01d33fd",
             "textRange": {
-                "startLine": 220,
-                "endLine": 220,
+                "startLine": 238,
+                "endLine": 238,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5674,11 +5644,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 225,
+            "line": 243,
             "hash": "94b9a9e5b247b0791c1ba18da3e044bd",
             "textRange": {
-                "startLine": 225,
-                "endLine": 225,
+                "startLine": 243,
+                "endLine": 243,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5716,11 +5686,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 241,
+            "line": 259,
             "hash": "a416255ad3037a19da24ee15bec35ee4",
             "textRange": {
-                "startLine": 241,
-                "endLine": 241,
+                "startLine": 259,
+                "endLine": 259,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5758,11 +5728,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 246,
+            "line": 264,
             "hash": "1ec176e7df853ee3d0d06433e0a1dea2",
             "textRange": {
-                "startLine": 246,
-                "endLine": 246,
+                "startLine": 264,
+                "endLine": 264,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5800,11 +5770,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 251,
+            "line": 269,
             "hash": "26d66f107d57f84e2380dd7bb2dcb264",
             "textRange": {
-                "startLine": 251,
-                "endLine": 251,
+                "startLine": 269,
+                "endLine": 269,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5842,11 +5812,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 256,
+            "line": 274,
             "hash": "41e70f9ca653b8f72af7cb75ff8c3d12",
             "textRange": {
-                "startLine": 256,
-                "endLine": 256,
+                "startLine": 274,
+                "endLine": 274,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5884,11 +5854,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 269,
+            "line": 287,
             "hash": "7b683d3165f7c638882be5b137311b0a",
             "textRange": {
-                "startLine": 269,
-                "endLine": 269,
+                "startLine": 287,
+                "endLine": 287,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5926,11 +5896,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 274,
+            "line": 292,
             "hash": "aa86ec8d297838f140d5d3ec05405bf0",
             "textRange": {
-                "startLine": 274,
-                "endLine": 274,
+                "startLine": 292,
+                "endLine": 292,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -5968,11 +5938,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 285,
+            "line": 303,
             "hash": "c9d039378482a2fbfddec4b6f24dfc34",
             "textRange": {
-                "startLine": 285,
-                "endLine": 285,
+                "startLine": 303,
+                "endLine": 303,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6010,11 +5980,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 290,
+            "line": 308,
             "hash": "7ce56b8ff8670dedb9b82eff85d32c2b",
             "textRange": {
-                "startLine": 290,
-                "endLine": 290,
+                "startLine": 308,
+                "endLine": 308,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6052,11 +6022,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 295,
+            "line": 313,
             "hash": "882881dc13e2dfc843143b5ff560fa94",
             "textRange": {
-                "startLine": 295,
-                "endLine": 295,
+                "startLine": 313,
+                "endLine": 313,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6094,11 +6064,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 330,
+            "line": 348,
             "hash": "0f9795ceee4a247259b30585ea095bd9",
             "textRange": {
-                "startLine": 330,
-                "endLine": 330,
+                "startLine": 348,
+                "endLine": 348,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6136,11 +6106,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 335,
+            "line": 353,
             "hash": "494a890be35e423b7c065851eeb46ddf",
             "textRange": {
-                "startLine": 335,
-                "endLine": 335,
+                "startLine": 353,
+                "endLine": 353,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6178,11 +6148,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 344,
+            "line": 362,
             "hash": "f0c0a41c3e975e6af9103410d73dadae",
             "textRange": {
-                "startLine": 344,
-                "endLine": 344,
+                "startLine": 362,
+                "endLine": 362,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6220,11 +6190,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 350,
+            "line": 368,
             "hash": "0d16496604cd88292c811f34b20c203f",
             "textRange": {
-                "startLine": 350,
-                "endLine": 350,
+                "startLine": 368,
+                "endLine": 368,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6262,11 +6232,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 370,
+            "line": 388,
             "hash": "05ef8b7e72694c138c8edc43a46ab752",
             "textRange": {
-                "startLine": 370,
-                "endLine": 370,
+                "startLine": 388,
+                "endLine": 388,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6304,11 +6274,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 376,
+            "line": 394,
             "hash": "83ff9d61b9f2e2deb182f209748816f6",
             "textRange": {
-                "startLine": 376,
-                "endLine": 376,
+                "startLine": 394,
+                "endLine": 394,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6346,11 +6316,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 390,
+            "line": 408,
             "hash": "ed362d7212902884a74590587d02d95c",
             "textRange": {
-                "startLine": 390,
-                "endLine": 390,
+                "startLine": 408,
+                "endLine": 408,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6388,11 +6358,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 393,
+            "line": 411,
             "hash": "19293aad22f1f16e72e09a776bb01475",
             "textRange": {
-                "startLine": 393,
-                "endLine": 393,
+                "startLine": 411,
+                "endLine": 411,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6430,11 +6400,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 398,
+            "line": 416,
             "hash": "7e39bedd4f7b120521e0ad05f8b9cd5b",
             "textRange": {
-                "startLine": 398,
-                "endLine": 398,
+                "startLine": 416,
+                "endLine": 416,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6472,11 +6442,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 403,
+            "line": 421,
             "hash": "287bbbf43d86a60a3d296c734e7dd54b",
             "textRange": {
-                "startLine": 403,
-                "endLine": 403,
+                "startLine": 421,
+                "endLine": 421,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6514,11 +6484,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 408,
+            "line": 426,
             "hash": "842f6ce49952b6d2eaf69c2afda8401b",
             "textRange": {
-                "startLine": 408,
-                "endLine": 408,
+                "startLine": 426,
+                "endLine": 426,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6556,11 +6526,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 413,
+            "line": 431,
             "hash": "16082ee2fd60dbab3348f35019806efd",
             "textRange": {
-                "startLine": 413,
-                "endLine": 413,
+                "startLine": 431,
+                "endLine": 431,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6598,11 +6568,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 418,
+            "line": 436,
             "hash": "fb7ce90636510e1afb0294289b9089eb",
             "textRange": {
-                "startLine": 418,
-                "endLine": 418,
+                "startLine": 436,
+                "endLine": 436,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6640,11 +6610,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 435,
+            "line": 453,
             "hash": "09b26deb2d2ef091d78d1e36821550c5",
             "textRange": {
-                "startLine": 435,
-                "endLine": 435,
+                "startLine": 453,
+                "endLine": 453,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6682,11 +6652,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 440,
+            "line": 458,
             "hash": "99fc5a24183c712cd258b0c486f5fec5",
             "textRange": {
-                "startLine": 440,
-                "endLine": 440,
+                "startLine": 458,
+                "endLine": 458,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6724,11 +6694,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 450,
+            "line": 468,
             "hash": "02e25333060c2d2b6675abe8976e7ac1",
             "textRange": {
-                "startLine": 450,
-                "endLine": 450,
+                "startLine": 468,
+                "endLine": 468,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6766,11 +6736,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 457,
+            "line": 475,
             "hash": "34bae27a0d854e0b01f40c160eb8cc47",
             "textRange": {
-                "startLine": 457,
-                "endLine": 457,
+                "startLine": 475,
+                "endLine": 475,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6808,11 +6778,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 486,
+            "line": 504,
             "hash": "8778ba1862cbbafb164b0fae13fbf32b",
             "textRange": {
-                "startLine": 486,
-                "endLine": 486,
+                "startLine": 504,
+                "endLine": 504,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6850,11 +6820,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 541,
+            "line": 559,
             "hash": "c7f626e9e8727351c65711d71778f8da",
             "textRange": {
-                "startLine": 541,
-                "endLine": 541,
+                "startLine": 559,
+                "endLine": 559,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6892,11 +6862,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 544,
+            "line": 562,
             "hash": "b34580cbfaa3990d2e4e9ed96cffa8ef",
             "textRange": {
-                "startLine": 544,
-                "endLine": 544,
+                "startLine": 562,
+                "endLine": 562,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6934,11 +6904,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 564,
+            "line": 582,
             "hash": "b59a2cf6f5f825c718cb1d907e5e63be",
             "textRange": {
-                "startLine": 564,
-                "endLine": 564,
+                "startLine": 582,
+                "endLine": 582,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -6976,11 +6946,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 569,
+            "line": 587,
             "hash": "e1f9219261c151b8ce4d7b82caab49a4",
             "textRange": {
-                "startLine": 569,
-                "endLine": 569,
+                "startLine": 587,
+                "endLine": 587,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -7018,11 +6988,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 574,
+            "line": 592,
             "hash": "9278d77e5857e2c7a4308a7dbbd902eb",
             "textRange": {
-                "startLine": 574,
-                "endLine": 574,
+                "startLine": 592,
+                "endLine": 592,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -7060,11 +7030,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 579,
+            "line": 597,
             "hash": "801a096da89d6cd05b38e0c03b07772e",
             "textRange": {
-                "startLine": 579,
-                "endLine": 579,
+                "startLine": 597,
+                "endLine": 597,
                 "startOffset": 18,
                 "endOffset": 19
             },
@@ -7102,11 +7072,11 @@
             "severity": "MAJOR",
             "component": "subscription-manager:code/app.js",
             "project": "subscription-manager",
-            "line": 584,
+            "line": 602,
             "hash": "7ef0be19ccf44e295ae5c937134d3816",
             "textRange": {
-                "startLine": 584,
-                "endLine": 584,
+                "startLine": 602,
+                "endLine": 602,
                 "startOffset": 18,
                 "endOffset": 19
             },

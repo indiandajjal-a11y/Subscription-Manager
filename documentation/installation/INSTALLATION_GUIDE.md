@@ -80,6 +80,8 @@ npm.cmd start
 | `CART_TTL_MINUTES` | `30` | Cart expiry period in minutes |
 | `DATABASE_URL` | none | PostgreSQL connection string |
 | `STORAGE_PROVIDER` | memory | Set to `postgres` for PostgreSQL persistence |
+| `NOTIFICATION_SMS_MAX_LENGTH` | `160` | Sprint 7 SMS truncation limit |
+| `NOTIFICATION_DATE_FORMAT` | `DD-MM-YYYY HH:MM:SS` | Sprint 7 default date rendering format |
 
 ## Run Tests
 
@@ -88,9 +90,9 @@ cd "C:\Subscription Manager"
 npm.cmd test
 ```
 
-Sprint 6 stable expected result:
+Sprint 7 stable expected result:
 
-- `98` passing tests
+- `105` passing tests
 - `0` failures
 
 On Windows PowerShell, prefer `npm.cmd test`; `npm test` may invoke `npm.ps1` and fail when script execution is disabled.

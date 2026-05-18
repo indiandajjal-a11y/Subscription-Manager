@@ -8,6 +8,11 @@ function dateOnly(value) {
   return value ? new Date(value).toISOString().slice(0, 10) : undefined;
 }
 
+function nullableNumber(value, fallback = null) {
+  const candidate = value ?? fallback;
+  return candidate === null || candidate === undefined ? null : Number(candidate);
+}
+
 export async function createPostgresPersistence(connectionString = process.env.DATABASE_URL) {
   if (!connectionString) {
     throw new Error("DATABASE_URL is required when PostgreSQL persistence is enabled.");
@@ -195,9 +200,9 @@ async function loadStore(pool) {
         quantity: row.quantity,
         purchasePolicy: row.purchase_policy,
         beneficiaryId: row.beneficiary_id ?? undefined,
-        pricedAmount: row.priced_amount === null ? (row.amount === null ? null : Number(row.amount)) : Number(row.priced_amount),
+        pricedAmount: nullableNumber(row.priced_amount, row.amount),
         pricedCurrency: row.priced_currency ?? row.currency,
-        amount: row.amount === null ? (row.priced_amount === null ? null : Number(row.priced_amount)) : Number(row.amount),
+        amount: nullableNumber(row.amount, row.priced_amount),
         currency: row.currency ?? row.priced_currency,
         status: row.status,
         fulfillmentStatus: row.fulfillment_status,

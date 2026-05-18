@@ -100,6 +100,16 @@ If `CS_ENDPOINT_URL` is not set, the Sprint 4 CS client uses local mock response
 - For CS attribute update troubleshooting, check fulfillment step records and the CS adapter result from `updateSubscriberAttributes`.
 - For retry troubleshooting, inspect `retryAttempts`, `nextRetryAt`, and `retryStepName` on the ProductOrder.
 
+## Sprint 7 Operational Checks
+
+- Run `npm.cmd test` before release. Expected stable result: `105` passing tests, `0` failures.
+- Confirm active templates through `/api/v1/admin/templates`.
+- Confirm dispatch attempts through `/api/v1/admin/dispatch-records`.
+- Confirm currency setup through `/api/v1/admin/currencies`; only one active default currency should be configured.
+- Confirm staff secondary links through `/api/v1/staff/links`.
+- For notification issues, inspect the source `NotificationEvent`, selected `CommunicationTemplate`, rendered `NotificationDispatchRecord.renderedBody`, and `failureReason`.
+- For SMS length complaints, check `NOTIFICATION_SMS_MAX_LENGTH` and template `maxLength`.
+
 ## Known Limitations
 
 - PostgreSQL adapter writes full in-memory state after mutations; this is acceptable for prototype scale but should be replaced by per-aggregate repositories before high-volume production use.

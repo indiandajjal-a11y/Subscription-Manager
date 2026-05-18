@@ -42,3 +42,7 @@ Current stable capabilities now include:
 - Renewal scheduling helpers
 - Gift subscription validation and sponsor/beneficiary relationship records
 - Notification event records with recipient context
+- Template-driven SMS and USSD notification dispatch
+- Operator-configurable currency symbols, minor units, and expiry date presentation
+- Reduced-step USSD/SMS purchase flow
+- Staff secondary-number linking for discounted staff plans

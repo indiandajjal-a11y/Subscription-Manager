@@ -38,4 +38,13 @@ The platform now includes:
 - Network activation/deactivation hooks
 - Customer segment resolution and configurable compensation policy support
 
-Notification template rendering and outbound dispatch remain deferred to the notification sprint.
+## Sprint 7 Stable Additions
+
+The platform now also includes:
+
+- Notification template management for SMS and USSD
+- Template rendering with placeholders, basic math expressions, date formatting, amount formatting, and live balance lookup
+- Dispatch audit records for every notification attempt
+- Currency configuration for subscriber-facing amount display
+- Reduced-step cart subscription for channel flows
+- Staff secondary-number linking and STAFF segment override support

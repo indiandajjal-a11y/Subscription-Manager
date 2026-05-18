@@ -9,9 +9,9 @@ const CHARGING_SOURCES = ["MA", "DA", "LOYALTY", "MOBILE_MONEY"];
 const DISCOUNT_TYPES = ["fixed", "percentage"];
 const RULE_TYPES = ["serviceClass", "segment", "multiPurchase", "renewal", "channel", "psoFlag", "customerSegment"]; // Sprint 6: named CustomerSegment support
 const OPERATORS = ["equals", "notEquals", "in", "notIn"];
-const POLICIES = ["one-off", "auto-renewal", "gift"];
+const POLICIES = ["one-off", "auto-renewal", "gift", "SELF_ONE_OFF", "SELF_AUTO_RENEWAL", "GIFT"];
 const ORDER_STATUSES = ["acknowledged", "inProgress", "completed", "failed", "cancelled"];
-const FULFILLMENT_STEPS = ["debit", "attachOffer", "neaActivation", "removeOffer", "neaDeactivation"];
+const FULFILLMENT_STEPS = ["debit", "attachOffer", "csAttributeUpdate", "neaActivation", "removeOffer", "neaDeactivation"];
 const CHANNEL_TYPES = ["USSD", "SMS", "WEB", "CRM", "MOBILE_APP", "THIRD_PARTY", "SELF_CARE", "API_PARTNER", "WEB_PORTAL", "IVR", "VOUCHER"]; // Sprint 4: added API_PARTNER
 const CHANNEL_STATUSES = ["active", "inactive"];
 const COMPENSATION_TYPES = ["none", "creditBack", "retry"];
@@ -51,6 +51,25 @@ function assertEnum(value, allowed, field) {
   if (!allowed.includes(value)) {
     fail(422, "INVALID_ENUM", `${field} must be one of: ${allowed.join(", ")}.`, field);
   }
+}
+
+function normalizePurchasePolicyValue(policy = "one-off") {
+  if (typeof policy === "object" && policy !== null) {
+    return normalizePurchasePolicyValue(policy.type);
+  }
+  return {
+    SELF_ONE_OFF: "one-off",
+    SELF_AUTO_RENEWAL: "auto-renewal",
+    GIFT: "gift"
+  }[policy] || policy;
+}
+
+function activeCurrencyConfig(db, currency) {
+  return db.currencyConfigs?.get(String(currency).toUpperCase());
+}
+
+function defaultCurrencyCode(db) {
+  return [...(db.currencyConfigs || new Map()).values()].find((item) => item.status === "active" && item.isDefault)?.currencyCode || null;
 }
 
 function normalizeCharacteristics(characteristics = []) {
@@ -212,7 +231,8 @@ function normalizeEligibilityRule(rule) {
     ruleType: rule.ruleType,
     operator: rule.operator,
     value: String(rule.value),
-    failureReasonCode: rule.failureReasonCode
+    failureReasonCode: rule.failureReasonCode,
+    renewalExemptMultiPurchase: Boolean(rule.renewalExemptMultiPurchase)
   };
 }
 
@@ -235,6 +255,7 @@ export function createProductOffering(db, body) {
     compensationPolicy: normalizeCompensationPolicy(body.compensationPolicy),
     giftingEnabled: Boolean(body.giftingEnabled),
     maxGiftBeneficiaries: body.maxGiftBeneficiaries === undefined ? null : Number(body.maxGiftBeneficiaries),
+    maxSecondaryNumbers: body.maxSecondaryNumbers === undefined ? null : Number(body.maxSecondaryNumbers),
     csAttributeUpdates: normalizeCsAttributeUpdates(body.csAttributeUpdates || []),
     bundleCategory: body.bundleCategory || specification.bundleCategory || null,
     sunsetDate: body.sunsetDate,
@@ -273,7 +294,7 @@ export function getProductOffering(db, id) {
 export function updateProductOffering(db, id, body) {
   const offering = getProductOffering(db, id);
   if (body.name) ensureUniqueName(db.productOfferings, body.name, id, "ProductOffering");
-  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours", "giftingEnabled", "maxGiftBeneficiaries", "bundleCategory"]) {
+  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours", "giftingEnabled", "maxGiftBeneficiaries", "maxSecondaryNumbers", "bundleCategory"]) {
     if (body[field] !== undefined) offering[field] = body[field];
   }
   if (body.compensationPolicy !== undefined) offering.compensationPolicy = normalizeCompensationPolicy(body.compensationPolicy);
@@ -307,19 +328,24 @@ export function addProductOfferingPrice(db, offeringId, body) {
   const offering = getProductOffering(db, offeringId);
   assertEnum(body.priceType, PRICE_TYPES, "priceType");
   assertRequired(body.amount, "amount");
-  assertRequired(body.currency, "currency");
+  assertRequired(body.currency || body.currencyCode, "currency");
   if (body.chargingSource === undefined && body.defaultChargingSource === undefined) {
     fail(422, "CHARGING_SOURCE_NOT_CONFIGURED", "chargingSource or defaultChargingSource is required.", "chargingSource");
   }
   if (body.chargingSource !== undefined && body.chargingSource !== null) assertEnum(body.chargingSource, CHARGING_SOURCES, "chargingSource");
   if (body.defaultChargingSource !== undefined && body.defaultChargingSource !== null) assertEnum(body.defaultChargingSource, CHARGING_SOURCES, "defaultChargingSource");
-  const currency = String(body.currency).toUpperCase();
+  const currency = String(body.currency || body.currencyCode).toUpperCase();
+  if (db.currencyConfigs?.size > 0) {
+    const currencyConfig = activeCurrencyConfig(db, currency);
+    if (!currencyConfig || currencyConfig.status !== "active") fail(422, "CURRENCY_NOT_SUPPORTED", "Price currency is not supported.", "currency");
+  }
   const price = {
     id: randomUUID(),
     productOfferingId: offeringId,
     priceType: body.priceType,
     amount: Number(body.amount),
     currency,
+    currencyCode: currency,
     chargingSource: body.chargingSource || null,
     daId: body.daId,
     defaultChargingSource: body.defaultChargingSource || null,
@@ -408,6 +434,10 @@ export function updateProductOfferingPrice(db, offeringId, priceId, body = {}) {
   for (const field of ["amount", "currency", "chargingSource", "daId", "defaultChargingSource", "allowPartialCharge", "isDefault"]) {
     if (body[field] !== undefined) price[field] = field === "amount" ? Number(body[field]) : body[field];
   }
+  if (body.currencyCode !== undefined) {
+    price.currency = String(body.currencyCode).toUpperCase();
+    price.currencyCode = price.currency;
+  }
   if (body.chargingPriority !== undefined) price.chargingPriority = normalizeChargingPriority(body.chargingPriority);
   if (body.priceAlteration !== undefined || body.priceAlterations !== undefined) {
     price.priceAlteration = normalizePriceAlterations(body.priceAlteration || body.priceAlterations || []);
@@ -447,14 +477,20 @@ function ensureCartUsable(cart, allowClosed = false) {
 export function createShoppingCart(db, body, config = configFromEnv()) {
   assertRequired(body.channelId, "channelId");
   assertRequired(body.subscriberId, "subscriberId");
-  assertRequired(body.currency, "currency");
   if (db.channels?.size > 0) {
     const channel = [...db.channels.values()].find((item) => item.id === body.channelId || item.channelId === body.channelId || item.name === body.channelId);
     if (!channel) fail(422, "UNKNOWN_CHANNEL", "Channel is not registered.", "channelId");
     if (channel.status !== "active") fail(422, "CHANNEL_INACTIVE", "Channel is inactive.", "channelId");
   }
-  const currency = String(body.currency).toUpperCase();
-  if (!config.supportedCurrencies.includes(currency)) fail(422, "UNSUPPORTED_CURRENCY", "Cart currency is not supported.", "currency");
+  const requestedCurrency = body.currency || defaultCurrencyCode(db);
+  assertRequired(requestedCurrency, "currency");
+  const currency = String(requestedCurrency).toUpperCase();
+  if (db.currencyConfigs?.size > 0) {
+    const currencyConfig = activeCurrencyConfig(db, currency);
+    if (!currencyConfig || currencyConfig.status !== "active") fail(422, "CURRENCY_NOT_SUPPORTED", "Cart currency is not supported.", "currency");
+  } else if (!config.supportedCurrencies.includes(currency)) {
+    fail(422, "UNSUPPORTED_CURRENCY", "Cart currency is not supported.", "currency");
+  }
   const timestamp = nowIso();
   const expiresAt = new Date(Date.now() + config.cartTtlMinutes * 60 * 1000).toISOString();
   const cart = {
@@ -485,7 +521,7 @@ function validateOfferingForCart(db, cart, productOfferingId, purchasePolicy, be
   if (offering.channelAvailability.length > 0 && !offering.channelAvailability.includes(cart.channelId)) {
     fail(422, "CHANNEL_NOT_ALLOWED", "ProductOffering is not available for this channel.", "channelId");
   }
-  if (purchasePolicy === "gift") {
+  if (normalizePurchasePolicyValue(purchasePolicy) === "gift") {
     if (!beneficiaryId) fail(422, "BENEFICIARY_REQUIRED", "beneficiaryId is required for gift purchases.", "beneficiaryId");
     if (beneficiaryId === cart.subscriberId) fail(422, "SELF_GIFT_NOT_ALLOWED", "beneficiaryId must differ from subscriberId for gift purchases.", "beneficiaryId");
     if (!offering.giftingEnabled) fail(422, "GIFTING_NOT_ALLOWED_FOR_OFFERING", "ProductOffering does not allow gifting.", "giftingEnabled");
@@ -496,16 +532,18 @@ function validateOfferingForCart(db, cart, productOfferingId, purchasePolicy, be
 export function addCartItem(db, cartId, body) {
   const cart = getShoppingCart(db, cartId, false);
   assertRequired(body.productOfferingId, "productOfferingId");
-  const purchasePolicy = body.purchasePolicy || "one-off";
+  const policyInput = body.purchasePolicy || "one-off";
+  const purchasePolicy = normalizePurchasePolicyValue(policyInput);
   assertEnum(purchasePolicy, POLICIES, "purchasePolicy");
-  validateOfferingForCart(db, cart, body.productOfferingId, purchasePolicy, body.beneficiaryId);
+  const beneficiaryId = body.beneficiaryId || (typeof policyInput === "object" ? policyInput.beneficiaryId : undefined);
+  validateOfferingForCart(db, cart, body.productOfferingId, purchasePolicy, beneficiaryId);
   const item = {
     id: randomUUID(),
     cartId,
     productOfferingId: body.productOfferingId,
     quantity: Number(body.quantity || 1),
     purchasePolicy,
-    beneficiaryId: body.beneficiaryId,
+    beneficiaryId,
     pricedAmount: null,
     pricedCurrency: null,
     validationStatus: "pending",
@@ -566,6 +604,22 @@ function resolveCustomerSegmentId(db, subscriberAccount = {}) {
   return null;
 }
 
+function applyStaffSegmentOverrideIfEligible(db, subscriberAccount, offeringId) {
+  const link = [...(db.staffNumberLinks || new Map()).values()].find((candidate) =>
+    candidate.secondaryNumber === subscriberAccount.subscriberId &&
+    candidate.offeringId === offeringId &&
+    candidate.status === "active"
+  );
+  if (!link) return;
+  const staffSegment = [...(db.customerSegments || new Map()).values()].find((segment) =>
+    segment.status === "active" && segment.name === "STAFF"
+  );
+  if (!staffSegment) return;
+  subscriberAccount.resolvedSegmentId = staffSegment.id;
+  subscriberAccount.resolvedViaStaffLink = true;
+  subscriberAccount.staffLinkId = link.id;
+}
+
 function conditionMatches(condition, attributes) {
   if (!condition) return true;
 
@@ -580,9 +634,8 @@ function conditionMatches(condition, attributes) {
 
   const actual = String(attributes[field] ?? "");
 
-  return operator === "=="
-    ? actual === expected
-    : actual !== expected;
+  if (operator === "==") return actual === expected;
+  return actual !== expected;
 }
 
 function characteristicValue(specification, name) {
@@ -626,13 +679,7 @@ export function selectPrice(offering, currency, attributes = {}) {
 }
 
 function alterationRuleMatches(rule, attributes = {}) {
-  const value = rule.attribute === "psoFlag"
-    ? attributes.psoFlags
-    : rule.attribute === "offerId"
-      ? attributes.offerIds
-      : rule.attribute === "customerSegment"
-        ? attributes.customerSegment || attributes.resolvedSegmentId
-        : attributes[rule.attribute];
+  const value = alterationAttributeValue(rule.attribute, attributes);
   const expected = Array.isArray(rule.value) ? rule.value.map(String) : String(rule.value).split(",").map((item) => item.trim());
   if (rule.operator === "equals") return String(value) === String(rule.value);
   if (rule.operator === "in") return expected.includes(String(value));
@@ -642,6 +689,13 @@ function alterationRuleMatches(rule, attributes = {}) {
     return String(value || "").includes(String(rule.value));
   }
   return false;
+}
+
+function alterationAttributeValue(attribute, attributes) {
+  if (attribute === "psoFlag") return attributes.psoFlags;
+  if (attribute === "offerId") return attributes.offerIds;
+  if (attribute === "customerSegment") return attributes.customerSegment || attributes.resolvedSegmentId;
+  return attributes[attribute];
 }
 
 function calculatePriceAlteration(price, amount, attributes = {}) {
@@ -674,7 +728,10 @@ export function validateShoppingCart(db, cartId, body = {}) {
       const failedRule = offering.eligibilityRules.find((rule) => !ruleMatches(rule, attributes, cart));
       if (failedRule) fail(422, failedRule.failureReasonCode, "Subscriber is not eligible for this ProductOffering.", "eligibilityRules");
       const price = selectPrice(offering, cart.currency, attributes);
-      if (!price) fail(422, "NO_PRICE_FOR_CURRENCY", "No ProductOfferingPrice exists for the cart currency.", "currency");
+      if (!price) {
+        const reason = db.currencyConfigs?.size > 0 ? "PRICE_NOT_AVAILABLE_IN_CURRENCY" : "NO_PRICE_FOR_CURRENCY";
+        fail(422, reason, "No ProductOfferingPrice exists for the cart currency.", "currency");
+      }
       const baseAmount = Number((price.amount * item.quantity).toFixed(2));
       const previewDiscount = calculatePriceAlteration(price, baseAmount, attributes);
       item.originalAmount = baseAmount;
@@ -909,6 +966,9 @@ function recordNotification(db, eventType, order, payload = {}) {
     orderId: order.id,
     subscriberId: order.subscriberId,
     channelId: order.channelId,
+    recipientType: payload.recipientType || "SELF",
+    recipientId: payload.recipientId || order.subscriberId,
+    orderType: order.orderType,
     payload,
     status: "pending",
     createdAt: nowIso()
@@ -1091,6 +1151,12 @@ function findInventoryById(db, subscriptionId) {
   return db.productInventories.get(subscriptionId);
 }
 
+function fulfillmentStatusForStep({ required, failedStep, stepName }) {
+  if (!required) return "skipped";
+  if (failedStep === stepName) return "failed";
+  return "success";
+}
+
 export function createTerminateOrderFromSubscription(db, body = {}, auth = {}) {
   assertRequired(body.subscriptionId, "subscriptionId");
   const inventory = findInventoryById(db, body.subscriptionId);
@@ -1180,6 +1246,8 @@ function priceForOrderItem(db, order, item, subscriberAccount) {
   return selectPrice(offering, order.currency, {
     serviceClass: subscriberAccount?.serviceClass,
     segment: subscriberAccount?.segment,
+    customerSegment: subscriberAccount?.resolvedSegmentId,
+    resolvedSegmentId: subscriberAccount?.resolvedSegmentId,
     psoFlags: subscriberAccount?.psoFlags,
     offerIds: subscriberAccount?.offerIds || []
   });
@@ -1190,7 +1258,10 @@ function resolveChargingForOrder(db, order) {
   const subscriberAccount = getSubscriberAccountByOrder(db, order.id);
   const item = order.items[0];
   const price = priceForOrderItem(db, order, item, subscriberAccount);
-  if (!price) fail(422, "NO_PRICE_FOR_CURRENCY", "No ProductOfferingPrice exists for the order currency.", "currency");
+  if (!price) {
+    const reason = db.currencyConfigs?.size > 0 ? "PRICE_NOT_AVAILABLE_IN_CURRENCY" : "NO_PRICE_FOR_CURRENCY";
+    fail(422, reason, "No ProductOfferingPrice exists for the order currency.", "currency");
+  }
   const effectiveSource = price.chargingSource || price.defaultChargingSource;
   if (!effectiveSource) fail(422, "CHARGING_SOURCE_NOT_CONFIGURED", "No charging source is configured for this price.", "chargingSource");
   const totalAmount = Number(order.items.reduce((sum, candidate) => sum + Number(candidate.originalAmount ?? candidate.pricedAmount ?? 0), 0).toFixed(2));
@@ -1263,27 +1334,41 @@ function executeTerminateOrderFulfillment(db, order, body = {}) {
   if (!inventory || inventory.status !== "active") fail(409, "SUBSCRIPTION_NOT_ACTIVE", "Subscription is not active.", "status");
   const originalOrder = getProductOrder(db, order.originalOrderId);
   const failedStep = body.failedStep;
-  const removeStatus = !inventory.csAttachmentId ? "skipped" : failedStep === "removeOffer" ? "failed" : "success";
+  const removeStatus = fulfillmentStatusForStep({
+    required: Boolean(inventory.csAttachmentId),
+    failedStep,
+    stepName: "removeOffer"
+  });
   const removeResponseStatus = body.removeOfferResult || (body.csOfferStatus === "notFound" ? "notFound" : removeStatus);
   const removeSucceeded = ["success", "skipped", "notFound"].includes(removeResponseStatus);
+  const removeResponsePayload = removeStatus === "skipped"
+    ? { status: "skipped", reason: "CS_ATTACHMENT_ID_NOT_SET" }
+    : { removalId: randomUUID(), status: removeResponseStatus };
   fulfillmentStep(order, "removeOffer", removeStatus, {
     orderId: order.id,
     originalOrderId: order.originalOrderId,
     subscriberId: order.subscriberId,
     productOfferingId: inventory.productOfferingId,
     csAttachmentId: inventory.csAttachmentId || null
-  }, removeStatus === "skipped" ? { status: "skipped", reason: "CS_ATTACHMENT_ID_NOT_SET" } : { removalId: randomUUID(), status: removeResponseStatus }, removeSucceeded ? null : "CS_OFFER_REMOVE_FAILED");
+  }, removeResponsePayload, removeSucceeded ? null : "CS_OFFER_REMOVE_FAILED");
   if (!removeSucceeded) {
     const failed = failFulfillmentOrder(order, "removeOffer", "CS_OFFER_REMOVE_FAILED");
     recordNotification(db, "ORDER_FAILED", failed, {});
     return failed;
   }
   const neaRequired = originalOrder.items.some((item) => offeringCharacteristicValue(db, item.productOfferingId, "neaActivationRequired")?.value === "true");
-  const deactivationStatus = !neaRequired ? "skipped" : failedStep === "neaDeactivation" ? "failed" : "success";
+  const deactivationStatus = fulfillmentStatusForStep({
+    required: neaRequired,
+    failedStep,
+    stepName: "neaDeactivation"
+  });
+  const deactivationResponsePayload = deactivationStatus === "skipped"
+    ? { status: "skipped", reason: "NEA_DEACTIVATION_NOT_REQUIRED" }
+    : { deactivationId: randomUUID(), status: deactivationStatus };
   fulfillmentStep(order, "neaDeactivation", deactivationStatus, {
     orderId: order.id,
     subscriberId: order.subscriberId
-  }, deactivationStatus === "skipped" ? { status: "skipped", reason: "NEA_DEACTIVATION_NOT_REQUIRED" } : { deactivationId: randomUUID(), status: deactivationStatus }, deactivationStatus === "failed" ? "NEA_DEACTIVATION_FAILED" : null);
+  }, deactivationResponsePayload, deactivationStatus === "failed" ? "NEA_DEACTIVATION_FAILED" : null);
   if (deactivationStatus === "failed") {
     inventory.neaDeprovisioningFailed = true;
     inventory.updatedAt = nowIso();
@@ -1367,14 +1452,21 @@ export function executeProductOrderFulfillment(db, orderId, body = {}) {
   }
 
   const neaRequired = order.items.some((item) => offeringCharacteristicValue(db, item.productOfferingId, "neaActivationRequired")?.value === "true");
-  const neaStatus = !neaRequired ? "skipped" : body.provisioningResult === "failed" || failedStep === "neaActivation" ? "failed" : "success";
+  const neaStatus = fulfillmentStatusForStep({
+    required: neaRequired,
+    failedStep: body.provisioningResult === "failed" ? "neaActivation" : failedStep,
+    stepName: "neaActivation"
+  });
   const neaFailureReason = body.failureReasonCode || "NEA_ACTIVATION_FAILED";
+  const neaResponsePayload = neaStatus === "skipped"
+    ? { status: "skipped", reason: "NEA_ACTIVATION_NOT_REQUIRED" }
+    : { activationId: randomUUID(), status: neaStatus };
   fulfillmentStep(
     order,
     "neaActivation",
     neaStatus,
     { orderId: order.id, subscriberId: order.subscriberId },
-    neaStatus === "skipped" ? { status: "skipped", reason: "NEA_ACTIVATION_NOT_REQUIRED" } : { activationId: randomUUID(), status: neaStatus },
+    neaResponsePayload,
     neaStatus === "failed" ? neaFailureReason : null
   );
   if (neaStatus !== "success") {
@@ -1507,7 +1599,9 @@ function createProductInventoryRecordsForOrder(db, order, options = {}) {
         onActivation: options.notificationFlags?.onActivation ?? true,
         onRenewal: options.notificationFlags?.onRenewal ?? true,
         onExpiry: options.notificationFlags?.onExpiry ?? true,
-        onFailure: options.notificationFlags?.onFailure ?? true
+        onFailure: options.notificationFlags?.onFailure ?? true,
+        notifySponsorOnActivation: options.notificationFlags?.notifySponsorOnActivation ?? true,
+        notifySponsorOnFailure: options.notificationFlags?.notifySponsorOnFailure ?? true
       },
       csAttachmentId: options.csAttachmentId || attachStep?.responsePayload?.attachmentId || null,
       activatedAt: timestamp,
@@ -1979,6 +2073,8 @@ export function createSubscriberAccountSnapshot(db, orderId, csData) {
     psoFlags: csData.psoFlags || "",
     offerIds: csData.offerIds || [],
     resolvedSegmentId: csData.resolvedSegmentId || null,
+    resolvedViaStaffLink: Boolean(csData.resolvedViaStaffLink),
+    staffLinkId: csData.staffLinkId || null,
     expiryDate: csData.expiryDate || null,
     fetchedAt: nowIso(),
     csResponseCode: csData.responseCode || csData.csResponseCode || "0",
@@ -2011,6 +2107,9 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
     fail(422, "CS_SUBSCRIBER_FETCH_FAILED", "Subscriber account data is required for order validation.", "subscriberAccount");
   }
   subscriberAccount.resolvedSegmentId = resolveCustomerSegmentId(db, subscriberAccount);
+  for (const item of order.items) {
+    applyStaffSegmentOverrideIfEligible(db, subscriberAccount, item.productOfferingId);
+  }
 
   const failureReasonCodes = [];
   let channelValid = true;
@@ -2049,6 +2148,7 @@ export function validateProductOrderWithSubscriberAccount(db, orderId, subscribe
 
     for (const rule of offering.eligibilityRules) {
       if (rule.ruleType === "multiPurchase") {
+        if (order.orderType === "renew" && rule.renewalExemptMultiPurchase) continue;
         // Check if offering already attached on CS
         if (subscriberAccount.offerIds.includes(offering.id) || subscriberAccount.offerIds.includes(item.productOfferingId)) {
           subscriberEligible = false;

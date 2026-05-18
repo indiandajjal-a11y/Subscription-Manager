@@ -396,3 +396,56 @@ List gift party relationships:
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/party-relationships?sponsorId=2348012345678"
 ```
+
+## Sprint 7 Examples
+
+Create a currency:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/admin/currencies" -ContentType "application/json" -Body '{
+  "currencyCode": "NGN",
+  "symbol": "NGN ",
+  "minorUnit": 2,
+  "isDefault": true
+}'
+```
+
+Create an SMS template:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/admin/templates" -ContentType "application/json" -Body '{
+  "name": "Order complete SMS",
+  "eventType": "ORDER_COMPLETED",
+  "channelType": "SMS",
+  "locale": "en",
+  "bodyTemplate": "Your {{offeringName}} is active. Charged {{chargedAmount}}. Expires {{endDate|format:DD/MM/YYYY}}",
+  "maxLength": 160
+}'
+```
+
+Dispatch a notification event:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/notification-events/{eventId}/dispatch"
+```
+
+Create a three-step channel purchase:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/items" -ContentType "application/json" -Body '{
+  "productOfferingId": "{offeringId}",
+  "purchasePolicy": { "type": "SELF_AUTO_RENEWAL" }
+}'
+
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/cart/{cartId}/subscribe" -ContentType "application/json" -Body '{}'
+```
+
+Link a staff secondary number:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/staff/link" -ContentType "application/json" -Body '{
+  "primaryNumber": "2348011111111",
+  "secondaryNumber": "2348022222222",
+  "offeringId": "{staffOfferingId}"
+}'
+```

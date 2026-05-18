@@ -60,6 +60,7 @@ Sprint 5 charging fields:
 Default rule:
 
 - Exactly one default price per offering per currency is enforced by application logic and PostgreSQL partial unique index.
+- Sprint 7 accepts `currencyCode` as an alias for `currency` and validates it against active `CurrencyConfig` records when the currency catalog is enabled.
 
 ## ShoppingCart
 
@@ -81,6 +82,7 @@ Purchase policies:
 - `one-off`
 - `auto-renewal`
 - `gift`
+- Sprint 7 also accepts channel-facing aliases `SELF_ONE_OFF`, `SELF_AUTO_RENEWAL`, and `GIFT`.
 
 ## ProductOrder
 
@@ -163,6 +165,7 @@ Steps:
 
 - `debit`
 - `attachOffer`
+- `csAttributeUpdate`
 - `neaActivation`
 
 Statuses:
@@ -407,3 +410,69 @@ Key fields:
 `SubscriberAccount` now supports `resolvedSegmentId`.
 
 `NotificationEvent` helper records support `recipientType` and `recipientId`.
+
+## CommunicationTemplate
+
+Sprint 7 stores TMF681-style notification templates.
+
+Key fields:
+
+- `name`
+- `version`
+- `eventType`
+- `channelType`
+- `locale`
+- `offeringId`
+- `bodyTemplate`
+- `maxLength`
+- `appendPromo`
+- `promoText`
+- `status`
+
+Selection prefers offering-specific channel templates, then channel defaults, then `ALL` channel fallbacks.
+
+## NotificationDispatchRecord
+
+Sprint 7 records each attempted notification dispatch.
+
+Key fields:
+
+- `notificationEventId`
+- `templateId`
+- `recipientId`
+- `channelType`
+- `renderedBody`
+- `status`
+- `dispatchedAt`
+- `failureReason`
+- `gatewayRef`
+
+Statuses are `pending`, `sent`, `failed`, and `skipped`.
+
+## CurrencyConfig
+
+Sprint 7 stores operator currency configuration.
+
+Key fields:
+
+- `currencyCode`
+- `symbol`
+- `minorUnit`
+- `isDefault`
+- `status`
+
+The default active currency may be used when a channel creates a cart without a currency.
+
+## StaffNumberLink
+
+Sprint 7 links staff primary numbers to secondary subscriber numbers.
+
+Key fields:
+
+- `primaryNumber`
+- `secondaryNumber`
+- `offeringId`
+- `status`
+- `linkedBy`
+
+An active link can apply a STAFF segment override during order validation for the linked offering only.

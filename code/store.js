@@ -21,7 +21,12 @@ export function createStore() {
     // Sprint 6 additions
     customerSegments: new Map(),
     renewalSchedules: new Map(),
-    partyRelationships: new Map()
+    partyRelationships: new Map(),
+    // Sprint 7 additions
+    communicationTemplates: new Map(),
+    notificationDispatchRecords: new Map(),
+    currencyConfigs: new Map(),
+    staffNumberLinks: new Map()
   };
 }
 

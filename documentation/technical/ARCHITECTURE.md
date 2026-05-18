@@ -14,6 +14,8 @@ Sprint 5 adds subscription cancellation eligibility/fulfillment rules and an adv
 
 Sprint 6 adds subscriber lifecycle automation: CS attribute update configuration, named CustomerSegment resolution, renewal scheduling helpers, gift order support, PartyRelationship records, recipient-aware notifications, and per-offering compensation policies.
 
+Sprint 7 adds the notification presentation layer: TMF681-style templates, placeholder/math rendering, live GBAD balance lookup at dispatch time, USSD/SMS dispatch records, currency configuration, combined channel subscribe flow, and staff secondary-number links.
+
 ## Runtime Components
 
 `code/server.js`
@@ -44,6 +46,10 @@ Sprint 6 adds subscriber lifecycle automation: CS attribute update configuration
 `code/sprint6.js`
 
 - Provides Sprint 6 helper modules for CustomerSegment, RenewalSchedule, RenewalScheduler, PartyRelationship, gift validation, CS attribute update computation, compensation policy access, renewal order creation, retry tracking, and recipient-aware notifications
+
+`code/sprint7.js`
+
+- Provides Sprint 7 helper modules for CommunicationTemplate, NotificationDispatchRecord, CurrencyConfig, template rendering, notification dispatch, StaffNumberLink, staff segment override helpers, and the combined `subscribeCart` flow
 
 `code/sprint4.js`
 
@@ -156,6 +162,27 @@ Sprint 6 adds:
 - Gift checkout uses `orderType: "gift"` when a cart item has `purchasePolicy: "gift"` or `beneficiaryId`
 - ProductOrder validation resolves `SubscriberAccount.resolvedSegmentId` before eligibility and discount checks
 
+Sprint 7 adds:
+
+- `POST /api/v1/admin/templates`
+- `GET /api/v1/admin/templates`
+- `GET /api/v1/admin/templates/:templateId`
+- `PATCH /api/v1/admin/templates/:templateId`
+- `DELETE /api/v1/admin/templates/:templateId`
+- `POST /api/v1/notification-events/:eventId/dispatch`
+- `GET /api/v1/admin/dispatch-records`
+- `GET /api/v1/admin/dispatch-records/:dispatchId`
+- `GET /api/v1/orders/:orderId/notification-events`
+- `POST /api/v1/admin/currencies`
+- `GET /api/v1/admin/currencies`
+- `GET /api/v1/admin/currencies/:code`
+- `PATCH /api/v1/admin/currencies/:code`
+- `DELETE /api/v1/admin/currencies/:code`
+- `POST /api/v1/staff/link`
+- `GET /api/v1/staff/links`
+- `DELETE /api/v1/staff/links/:linkId`
+- `POST /api/v1/cart/:cartId/subscribe`
+
 ## Testing Strategy
 
 `testing/sprint1.test.js`
@@ -194,9 +221,17 @@ Sprint 6 adds:
 - Gift validation and PartyRelationship tests
 - Compensation policy, retry tracking, and recipient notification tests
 
+`testing/sprint7.test.js`
+
+- CurrencyConfig defaults and retirement guard
+- CommunicationTemplate selection, rendering, and dispatch records
+- Live balance placeholder behavior
+- Staff secondary-number segment override
+- Combined USSD/SMS subscribe flow
+
 Current full-suite result:
 
-- `98` tests passing
+- `105` tests passing
 - `0` failures
 
 Run all tests:
