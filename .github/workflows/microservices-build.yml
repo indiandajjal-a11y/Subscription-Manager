@@ -1,0 +1,49 @@
+name: Microservices Build
+
+on:
+  push:
+    branches:
+      - microservices-base
+    paths:
+      - "pom.xml"
+      - "common-lib/**"
+      - "catalog-service/**"
+      - "cart-service/**"
+      - "order-service/**"
+      - "inventory-service/**"
+      - "channel-service/**"
+      - "customer-service/**"
+      - "notification-service/**"
+      - "charging-service/**"
+      - ".github/workflows/microservices-build.yml"
+  pull_request:
+    paths:
+      - "pom.xml"
+      - "common-lib/**"
+      - "catalog-service/**"
+      - "cart-service/**"
+      - "order-service/**"
+      - "inventory-service/**"
+      - "channel-service/**"
+      - "customer-service/**"
+      - "notification-service/**"
+      - "charging-service/**"
+      - ".github/workflows/microservices-build.yml"
+
+jobs:
+  maven-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build Maven reactor
+        run: mvn -B -ntp verify
