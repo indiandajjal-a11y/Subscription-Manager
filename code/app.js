@@ -171,6 +171,24 @@ async function validateWithChargingSystem(db, orderId, config, chargingSystemCli
   return validateProductOrderWithSubscriberAccount(db, order.id, account);
 }
 
+async function executeAndSend(res, persistence, db, status, action) {
+  const result = await action();
+
+  await saveIfNeeded(persistence, db);
+
+  return send(res, status, result);
+}
+
+function route(method, pathname, expectedMethod, expectedPath) {
+  return method === expectedMethod && pathname === expectedPath;
+}
+
+function routeWithParams(method, pathname, expectedMethod, pattern) {
+  return method === expectedMethod
+    ? is(method, expectedMethod, pathname, pattern)
+    : null;
+}
+
 export function createHandler(db = defaultStore, config = configFromEnv(), persistence = undefined) {
   const mergedConfig = { ...configFromEnv(), ...config };
   return async function handler(req, res) {
@@ -201,18 +219,18 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
         return send(res, 200, listChannelAuthTokens(db, query));
       }
 
-      if (method === "POST" && pathname === "/api/v1/catalog/specifications") {
-        const result = createProductSpecification(db, await readJson(req));
-        await saveIfNeeded(persistence, db);
-        return send(res, 201, result);
-      }
-      if (method === "GET" && pathname === "/api/v1/catalog/specifications") {
-        return send(res, 200, listProductSpecifications(db, query));
-      }
+      if (route(method, pathname, "POST", "/api/v1/catalog/specifications")) {
+  return executeAndSend(res, persistence, db, 201, async () =>
+    createProductSpecification(db, await readJson(req))
+  );
+}
+if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
+  return send(res, 200, listProductSpecifications(db, query));
+} 
       if ((params = is(method, "GET", pathname, "/api/v1/catalog/specifications/:id"))) {
         return send(res, 200, getProductSpecification(db, params.id));
       }
-      if ((params = is(method, "PATCH", pathname, "/api/v1/catalog/specifications/:id"))) {
+      if ((params = routeWithParams(method, pathname, "PATCH", "/api/v1/catalog/specifications/:id"))) {
         const result = updateProductSpecification(db, params.id, await readJson(req));
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
