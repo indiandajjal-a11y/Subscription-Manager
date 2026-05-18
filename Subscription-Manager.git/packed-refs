@@ -1,0 +1,23 @@
+# pack-refs with: peeled fully-peeled sorted 
+403fa206e3cc615821eea0adabcd17d4da44d720 refs/heads/main
+8d2127c5269b7be4d0ac4d5e356a00ddaff9b169 refs/heads/pawansinghal007-bot-patch-1
+f3237231a1a5743a18f2a99932bd1d09cd238a27 refs/tags/sprint-5
+^d10b63e89ae40fffd64272e80d47b02d54df82d2
+bcf2cff70ad5b22b43a93583cd21618201bccdc2 refs/tags/v1.0-sprint6-sprint3-stable
+^be8888f6d4012b4da35e2f3025540ec52e3946ad
+d894b2cb788b185597724b0064dedb2c6b86bebc refs/tags/v1.0-sprint6-stable
+^7e668f77ee632087c1c4ed2ec21ae7117dac7827
+e9e0f21d351e05225abc01e647cb92c64dcc807f refs/tags/v3.0
+^bfc6313c570b886616aed277ffac7a9a3e624983
+3432ea45cd9660a8b23af5a1db6d17c49d834dab refs/tags/v3.1
+^cfea29a6f9ee221ed407dcd94c6f4318593e5b78
+6647651471706c0acd079bbd2f89e6a8538796c6 refs/tags/v4.0
+^7eee27aef4c4249ab1b333e2a0068cb8a9e53dff
+952bea02c48d2f8346eaaf0b2c2e58f6b8fcb920 refs/tags/v5.1
+^6ec582e66d5bfaba6a8b740d3e7397c37f6bd24d
+4f2490bfdbbd91978632111c508b0f8ef88ebf6e refs/tags/v5.3
+^e84a1ea037225b1cdae2c5731424f39da8f1e1d2
+a4db4e3de4da584a8488f75a9bb32da979f43c49 refs/tags/v5.4
+^3b3863641e70a7d949ddde4c38372f6fbdd97c1a
+6997ef61133fef4cc46075d580994c8504c69c37 refs/tags/v5.5
+^403fa206e3cc615821eea0adabcd17d4da44d720

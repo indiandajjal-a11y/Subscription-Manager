@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "https-forge-uncle-thesaurus-plenty-trycloudflare-com",
+        "projectKey": "subscription-manager"
+    }
+}

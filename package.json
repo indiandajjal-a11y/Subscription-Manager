@@ -1,17 +1,14 @@
 {
   "name": "subscription-manager",
-  "version": "5.3.0",
-  "description": "ISP Subscription Manager: TMF-aligned subscription lifecycle management with SonarQube quality integration.",
+  "version": "1.0.0",
+  "description": "Subscription Manager application",
   "type": "module",
   "scripts": {
-    "start": "node code/server.js",
-    "test": "node --test testing/*.test.js",
-    "coverage": "node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info testing/*.test.js"
+    "lint": "eslint . --ext .js",
+    "test": "node --test testing"
   },
-  "dependencies": {
-    "pg": "^8.16.0"
-  },
-  "engines": {
-    "node": ">=20"
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-plugin-sonarjs": "^0.25.1"
   }
 }
