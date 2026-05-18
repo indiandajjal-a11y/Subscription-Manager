@@ -568,11 +568,21 @@ function resolveCustomerSegmentId(db, subscriberAccount = {}) {
 
 function conditionMatches(condition, attributes) {
   if (!condition) return true;
-  const match = condition.match(/^\s*([A-Za-z0-9_]+)\s*(==|!=)\s*['"]?([^'"]+)['"]?\s*$/);
+
+  const CONDITION_REGEX =
+    /^\s*([A-Za-z0-9_]+)\s*(==|!=)\s*['"]?([^'"\\\r\n]{1,256})['"]?\s*$/;
+
+  const match = CONDITION_REGEX.exec(condition);
+
   if (!match) return false;
+
   const [, field, operator, expected] = match;
+
   const actual = String(attributes[field] ?? "");
-  return operator === "==" ? actual === expected : actual !== expected;
+
+  return operator === "=="
+    ? actual === expected
+    : actual !== expected;
 }
 
 function characteristicValue(specification, name) {

@@ -79,11 +79,11 @@ The original C:\ source directories are now empty, but Windows still has open ha
 Verify development for sprint 10 "Sprint_6_AI_Dev_Prompt.md"  test fully and please help check if we have enough tokens for attached file (Sprint 11 "Sprint_7_AI_Dev_Prompt.md"). if no Quit, if yes, lets go ahead and impliment (compare this prompt against what we already built and close any gaps precisely) also update testing and documentation files at the end
 C:\Subscription Manager\documentation
 C:\Subscription Manager\testing
-also update git by adding all changes, Commit with meaningful message, Create a Git tag (VERY important - something like "v5.0 -m "Sprint 11 - stable release ), push the code and lastly push the tag
+also update git by adding all changes, Commit with meaningful message, Create a Git tag (VERY important - something like "v5.2 -m "Sprint 11 - stable release ), push the code and lastly push the tag
 
 Refer to path "E:\Solution Documentation" for sprints details 
 Refer to path "E:\Subscription Manager" for development and code
-
+Refer to path https://polio-pending-companion.ngrok-free.dev/dashboard?id=subscription-manager&codeScope=overall to understand sonar cube recommendation
 Make sure to update below documents
 Name									Folder Path
 README.md								E:\Subscription Manager\documentation\
@@ -95,3 +95,6 @@ API_EXAMPLES.md							E:\Subscription Manager\documentation\technical\
 ARCHITECTURE.md							E:\Subscription Manager\documentation\technical\
 DATA_MODEL.md							E:\Subscription Manager\documentation\technical\
 Subscription_Manager_Release_Notes.md	E:\Subscription Manager\documentation\release-notes
+
+
+ngrok http 9000
