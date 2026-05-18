@@ -2,11 +2,14 @@ import http from "node:http";
 import { createHandler } from "./app.js";
 import { createPostgresPersistence } from "./postgresPersistence.js";
 import { store as memoryStore } from "./store.js";
+import { validateRuntimeConfig } from "./sprint9.js";
 
 const port = Number(process.env.PORT || 3000);
 const usePostgres = process.env.STORAGE_PROVIDER === "postgres" || Boolean(process.env.DATABASE_URL);
 let persistence;
 let db = memoryStore;
+
+validateRuntimeConfig();
 
 if (usePostgres) {
   persistence = await createPostgresPersistence();

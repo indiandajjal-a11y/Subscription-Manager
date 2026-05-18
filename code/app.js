@@ -119,6 +119,29 @@ import {
   updateTickProvisioningRule,
   validateTariffMigrationOrder
 } from "./sprint8.js";
+import {
+  auditLog,
+  createTransferLimit,
+  getActiveSimUpgradeConfig,
+  getCreditTransfer,
+  getCustomerPreference,
+  getSimUpgradeEvent,
+  handleSimUpgradeSubscriberResponse,
+  listCreditTransfers,
+  listSimUpgradeEvents,
+  listTransferLimits,
+  notificationDispatchedForOrder,
+  processSimUpgradeDeviceEvent,
+  readiness,
+  receiveSimUpgradeCallback,
+  requestCreditTransfer,
+  setTransferPin,
+  updateTransferLimit,
+  upsertCustomerPreference,
+  upsertSimUpgradeConfig,
+  withAsyncIdempotency,
+  withIdempotency
+} from "./sprint9.js";
 
 function send(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -169,10 +192,15 @@ function is(method, reqMethod, pathname, pattern) {
 }
 
 function isPublicRoute(method, pathname) {
-  if (method === "GET" && pathname === "/health") return true;
-  if (method === "POST" && pathname === "/api/v1/auth/token") return true;
-  if (method === "GET" && pathname === "/api/v1/catalog/offerings") return true;
-  return false;
+  return [
+    ["GET", "/health"],
+    ["GET", "/api/v1/health"],
+    ["GET", "/api/v1/ready"],
+    ["POST", "/api/v1/auth/token"],
+    ["POST", "/api/v1/sim-upgrade/device-event"],
+    ["POST", "/api/v1/sim-upgrade/cs-callback"],
+    ["GET", "/api/v1/catalog/offerings"]
+  ].some(([routeMethod, routePath]) => method === routeMethod && pathname === routePath);
 }
 
 function ensureChannelMatch(auth, resourceChannelId) {
@@ -231,6 +259,22 @@ function routeWithParams(method, pathname, expectedMethod, pattern) {
     : null;
 }
 
+function createOrderFromRequest(db, body, auth) {
+  if (body.orderType === "modify" && body.modifyType === "TARIFF_MIGRATION") return createTariffMigrationOrder(db, body);
+  if (body.orderType === "terminate") return createTerminateOrderFromSubscription(db, body, { ...auth, subscriberId: body.subscriberId });
+  return captureProductOrderFromCart(db, body);
+}
+
+async function validateOrderForRequest(db, order, orderId, mergedConfig) {
+  if (order.orderType === "modify" && order.modifyType === "TARIFF_MIGRATION") {
+    return validateTariffMigrationOrder(db, orderId, { chargingSystemClient: mergedConfig.chargingSystemClient });
+  }
+  if (mergedConfig.enableAuthEnforcement) {
+    return validateWithChargingSystem(db, orderId, mergedConfig, mergedConfig.chargingSystemClient);
+  }
+  return validateProductOrder(db, orderId, {});
+}
+
 export function createHandler(db = defaultStore, config = configFromEnv(), persistence = undefined) {
   const mergedConfig = { ...configFromEnv(), ...config };
   return async function handler(req, res) {
@@ -240,14 +284,21 @@ export function createHandler(db = defaultStore, config = configFromEnv(), persi
       let params;
       let auth = null;
 
-      if (method === "GET" && pathname === "/health") return send(res, 200, { status: "ok" });
+      if ((method === "GET" && pathname === "/health") || (method === "GET" && pathname === "/api/v1/health")) {
+        return send(res, 200, { status: "ok", checks: { db: "ok" } });
+      }
+      if (method === "GET" && pathname === "/api/v1/ready") {
+        return send(res, 200, await readiness(db, { chargingSystemClient: mergedConfig.chargingSystemClient }));
+      }
 
       if (mergedConfig.enableAuthEnforcement && pathname.startsWith("/api/v1/") && !isPublicRoute(method, pathname)) {
         auth = validateChannelAuth(db, req.headers, mergedConfig);
       }
 
       if (method === "POST" && pathname === "/api/v1/auth/token") {
-        const result = issueChannelAuthToken(db, await readJson(req), mergedConfig);
+        const result = await withAsyncIdempotency(db, req.headers["idempotency-key"], "auth-token", async () =>
+          issueChannelAuthToken(db, await readJson(req), mergedConfig)
+        );
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
       }
@@ -498,6 +549,61 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
         return send(res, 200, result);
       }
 
+      if (method === "GET" && pathname === "/api/v1/admin/sim-upgrade-config") {
+        return send(res, 200, getActiveSimUpgradeConfig(db));
+      }
+      if (method === "PATCH" && pathname === "/api/v1/admin/sim-upgrade-config") {
+        const result = upsertSimUpgradeConfig(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/admin/customer-preferences") {
+        const result = upsertCustomerPreference(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      params = is(method, "GET", pathname, "/api/v1/admin/customer-preferences/:subscriberId");
+      if (params) return send(res, 200, getCustomerPreference(db, params.subscriberId));
+      params = is(method, "PATCH", pathname, "/api/v1/admin/customer-preferences/:subscriberId");
+      if (params) {
+        const result = upsertCustomerPreference(db, { ...(await readJson(req)), subscriberId: params.subscriberId });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/sim-upgrade/device-event") {
+        if (mergedConfig.deviceMgmtApiKey && req.headers["x-device-mgmt-key"] !== mergedConfig.deviceMgmtApiKey) {
+          fail(401, "INVALID_DEVICE_MGMT_KEY", "Invalid device management API key.", "X-Device-Mgmt-Key");
+        }
+        const result = await processSimUpgradeDeviceEvent(db, await readJson(req), {
+          simCheckClient: mergedConfig.simCheckClient,
+          chargingSystemClient: mergedConfig.chargingSystemClient
+        });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/sim-upgrade/cs-callback") {
+        if (mergedConfig.csCallbackApiKey && req.headers["x-cs-callback-key"] !== mergedConfig.csCallbackApiKey) {
+          fail(401, "INVALID_CS_CALLBACK_KEY", "Invalid CS callback API key.", "X-CS-Callback-Key");
+        }
+        const result = await receiveSimUpgradeCallback(db, await readJson(req), { gatewayClient: mergedConfig.gatewayClient });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/sim-upgrade/subscriber-response") {
+        const result = await handleSimUpgradeSubscriberResponse(db, await readJson(req), { gatewayClient: mergedConfig.gatewayClient });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/sim-upgrade-events") {
+        return send(res, 200, listSimUpgradeEvents(db, query));
+      }
+      params = is(method, "GET", pathname, "/api/v1/admin/sim-upgrade-events/:eventId");
+      if (params) return send(res, 200, getSimUpgradeEvent(db, params.eventId));
+
+      if (method === "GET" && pathname === "/api/v1/admin/audit-log") {
+        return send(res, 200, auditLog(db, query));
+      }
+
       if (method === "POST" && pathname === "/api/v1/catalog/segments") {
         const result = createCustomerSegment(db, await readJson(req));
         await saveIfNeeded(persistence, db);
@@ -526,7 +632,9 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       if (method === "POST" && pathname === "/api/v1/cart") {
         const body = await readJson(req);
         ensureChannelMatch(auth, body.channelId);
-        const cart = createShoppingCart(db, body, mergedConfig);
+        const cart = withIdempotency(db, req.headers["idempotency-key"], "cart-create", () =>
+          createShoppingCart(db, body, mergedConfig)
+        );
         await saveIfNeeded(persistence, db);
         return send(res, 201, { cartId: cart.id, expiresAt: cart.expiresAt, currency: cart.currency });
       }
@@ -656,11 +764,9 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       }
       if (method === "POST" && pathname === "/api/v1/orders") {
         const body = await readJson(req);
-        const result = body.orderType === "modify" && body.modifyType === "TARIFF_MIGRATION"
-          ? createTariffMigrationOrder(db, body)
-          : body.orderType === "terminate"
-            ? createTerminateOrderFromSubscription(db, body, { ...auth, subscriberId: body.subscriberId })
-            : captureProductOrderFromCart(db, body);
+        const result = withIdempotency(db, req.headers["idempotency-key"], "orders-create", () =>
+          createOrderFromRequest(db, body, auth)
+        );
         await saveIfNeeded(persistence, db);
         return send(res, 201, result);
       }
@@ -668,18 +774,14 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       if (params) {
         const order = getProductOrder(db, params.orderId);
         ensureChannelMatch(auth, order.channelId);
-        return send(res, 200, order);
+        return send(res, 200, { ...order, notificationDispatched: notificationDispatchedForOrder(db, params.orderId) });
       }
       params = is(method, "POST", pathname, "/api/v1/orders/:orderId/validate");
       if (params) {
         await readJson(req);
         const order = getProductOrder(db, params.orderId);
         ensureChannelMatch(auth, order.channelId);
-        const result = order.orderType === "modify" && order.modifyType === "TARIFF_MIGRATION"
-          ? await validateTariffMigrationOrder(db, params.orderId, { chargingSystemClient: mergedConfig.chargingSystemClient })
-          : mergedConfig.enableAuthEnforcement
-          ? await validateWithChargingSystem(db, params.orderId, mergedConfig, mergedConfig.chargingSystemClient)
-          : validateProductOrder(db, params.orderId, {});
+        const result = await validateOrderForRequest(db, order, params.orderId, mergedConfig);
         await saveIfNeeded(persistence, db);
         return send(res, 200, result);
       }
@@ -734,6 +836,50 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
         const order = getProductOrder(db, params.orderId);
         ensureChannelMatch(auth, order.channelId);
         return send(res, 200, getTariffMigrationRequest(db, params.orderId));
+      }
+
+      if (method === "POST" && pathname === "/api/v1/transfer/pin") {
+        const result = setTransferPin(db, await readJson(req), { channelId: auth?.channelId });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/transfer/pin/reset") {
+        if ((auth?.channelType || query.channelType) !== "CRM") fail(403, "PIN_RESET_NOT_AUTHORIZED", "Admin PIN reset is restricted to CRM channels.", "channelType");
+        const result = setTransferPin(db, await readJson(req), { adminReset: true, channelId: auth?.channelId || "CRM" });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "POST" && pathname === "/api/v1/transfer/request") {
+        const result = await withAsyncIdempotency(db, req.headers["idempotency-key"], "transfer-request", async () =>
+          requestCreditTransfer(db, await readJson(req), { chargingSystemClient: mergedConfig.chargingSystemClient })
+        );
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      params = is(method, "GET", pathname, "/api/v1/transfer/:transferId");
+      if (params) return send(res, 200, getCreditTransfer(db, params.transferId));
+      if (method === "GET" && pathname === "/api/v1/transfer") {
+        return send(res, 200, listCreditTransfers(db, query));
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/transfer-limits") {
+        return send(res, 200, listTransferLimits(db, query));
+      }
+      if (method === "POST" && pathname === "/api/v1/admin/transfer-limits") {
+        const result = createTransferLimit(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      params = is(method, "PATCH", pathname, "/api/v1/admin/transfer-limits/:limitId");
+      if (params) {
+        const result = updateTransferLimit(db, params.limitId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      params = is(method, "DELETE", pathname, "/api/v1/admin/transfer-limits/:limitId");
+      if (params) {
+        const result = updateTransferLimit(db, params.limitId, { status: "inactive" });
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
       }
 
       if (method === "GET" && pathname === "/api/v1/inventory") {

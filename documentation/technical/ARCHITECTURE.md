@@ -273,3 +273,6 @@ Run all tests:
 ```powershell
 npm.cmd test
 ```
+# Sprint 13 Architecture Addendum
+
+Sprint 13 adds `code/sprint9.js` as a standalone module for event-driven SIM upgrade and custom credit transfer. SIM upgrade reuses Product Catalog, cart subscription, TMF681 dispatch, and CS attribute update boundaries. Credit transfer remains outside TMF ProductOrder/ProductInventory and uses its own lifecycle with CS debit/credit integration.

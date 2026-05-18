@@ -18,6 +18,8 @@ Sprint 3 adds ProductInventory, compensation/retry hooks, and channel integratio
 
 Sprint 4 adds channel authentication endpoints, optional protected-route enforcement, SubscriberAccount snapshots, and CS integration boundaries.
 
+Sprint 13 adds event-driven SIM upgrade automation, PIN-secured credit transfer, idempotency, audit log, health/readiness checks, open gap tracking, and a Sonar prevention rubric.
+
 Sprint 5 adds subscription cancellation business rules, termination audit fields, and advanced charging resolution for fallback, partial charging, defaults, and CS-attribute discounts.
 
 Sprint 6 stable verification closes the lifecycle, renewal, gifting, segment, CS attribute update, and configurable compensation gaps from the Sprint 10 prompt.

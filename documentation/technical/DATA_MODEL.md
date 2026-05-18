@@ -558,3 +558,8 @@ Key fields:
 - `tickAction`
 - `tickOfferId`
 - `status`
+# Sprint 13 Data Model Addendum
+
+New in-memory collections: `customerPreferences`, `simUpgradeRateLimits`, `simUpgradeEvents`, `simUpgradeConfigs`, `subscriberPins`, `transferLimits`, `creditTransferRequests`, `pinAttemptLogs`, and `idempotencyRecords`.
+
+`ProductOffering` now includes optional `psoFlagCharacteristicName` to document the ProductSpecification characteristic used to map CS PSO flags into eligibility checks.

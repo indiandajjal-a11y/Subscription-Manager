@@ -50,3 +50,6 @@ Current stable capabilities now include:
 - Consolidated USSD-ready bundle balance check
 - Bonus follow-up notification when a configured data bonus is detected
 - Tariff migration with configurable TICK provisioning or deprovisioning
+# Sprint 13 Capability Update
+
+Subscription Manager now supports event-driven 4G SIM upgrade campaigns and secure peer-to-peer credit transfer with encrypted subscriber PINs, bilateral notifications, and operational auditability.

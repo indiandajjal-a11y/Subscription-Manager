@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { fail } from "./errors.js";
 
 const SPEC_STATUSES = ["draft", "active", "retired"];
@@ -113,12 +113,13 @@ function normalizeCsAttributeUpdates(updates = []) {
 }
 
 function normalizeCompensationPolicy(policy = {}) {
+  const effectivePolicy = policy || {};
   return {
-    creditBackEnabled: policy.creditBackEnabled ?? true,
-    retryEnabled: policy.retryEnabled ?? false,
-    retryCount: Number(policy.retryCount ?? 3),
-    retryIntervalSeconds: Number(policy.retryIntervalSeconds ?? 60),
-    retryAsync: policy.retryAsync ?? true
+    creditBackEnabled: effectivePolicy.creditBackEnabled ?? true,
+    retryEnabled: effectivePolicy.retryEnabled ?? false,
+    retryCount: Number(effectivePolicy.retryCount ?? 3),
+    retryIntervalSeconds: Number(effectivePolicy.retryIntervalSeconds ?? 60),
+    retryAsync: effectivePolicy.retryAsync ?? true
   };
 }
 
@@ -258,6 +259,7 @@ export function createProductOffering(db, body) {
     maxSecondaryNumbers: body.maxSecondaryNumbers === undefined ? null : Number(body.maxSecondaryNumbers),
     csAttributeUpdates: normalizeCsAttributeUpdates(body.csAttributeUpdates || []),
     bundleCategory: body.bundleCategory || specification.bundleCategory || null,
+    psoFlagCharacteristicName: body.psoFlagCharacteristicName || null,
     sunsetDate: body.sunsetDate,
     createdAt: timestamp,
     updatedAt: timestamp
@@ -294,7 +296,7 @@ export function getProductOffering(db, id) {
 export function updateProductOffering(db, id, body) {
   const offering = getProductOffering(db, id);
   if (body.name) ensureUniqueName(db.productOfferings, body.name, id, "ProductOffering");
-  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours", "giftingEnabled", "maxGiftBeneficiaries", "maxSecondaryNumbers", "bundleCategory"]) {
+  for (const field of ["name", "channelAvailability", "sunsetDate", "cancellationWindowHours", "giftingEnabled", "maxGiftBeneficiaries", "maxSecondaryNumbers", "bundleCategory", "psoFlagCharacteristicName"]) {
     if (body[field] !== undefined) offering[field] = body[field];
   }
   if (body.compensationPolicy !== undefined) offering.compensationPolicy = normalizeCompensationPolicy(body.compensationPolicy);
@@ -1860,8 +1862,6 @@ export function listChannelInteractions(db, query = {}) {
 // ============================================================================
 // Sprint 4 — Authentication & CS Integration
 // ============================================================================
-
-import { createHmac, createHash } from "node:crypto";
 
 const AUTH_CHANNEL_TYPES_JWT_ONLY = ["CRM", "MOBILE_APP"];
 const AUTH_CHANNEL_TYPES_APIKEY_ALLOWED = ["USSD", "API_PARTNER", "THIRD_PARTY"];

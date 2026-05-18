@@ -154,6 +154,13 @@ export class RealChargingSystemClient {
     return this._withTransientRetries(() => this._realCreditBack(params));
   }
 
+  async credit(params) {
+    if (this.useMock) {
+      return this._mockCredit(params);
+    }
+    return this._withTransientRetries(() => this._realCredit(params));
+  }
+
   async updateSubscriberAttributes(params) {
     if (this.useMock) {
       return this._mockUpdateSubscriberAttributes(params);
@@ -221,6 +228,14 @@ export class RealChargingSystemClient {
       status: "success",
       failureReason: null,
       originalTransactionRef: params.originalTransactionRef || params.transactionRef || null
+    };
+  }
+
+  async _mockCredit() {
+    return {
+      transactionId: randomUUID(),
+      status: "success",
+      failureReason: null
     };
   }
 
@@ -541,6 +556,10 @@ export class RealChargingSystemClient {
         failureReason: error.name === "AbortError" ? "CS_TIMEOUT" : `CS_CREDIT_BACK_ERROR: ${error.message}`
       };
     }
+  }
+
+  async _realCredit(params) {
+    return this._realCreditBack({ ...params, creditReason: params.creditReason || "TRANSFER" });
   }
 
   async _realUpdateSubscriberAttributes(params) {

@@ -126,3 +126,9 @@ If `CS_ENDPOINT_URL` is not set, the Sprint 4 CS client uses local mock response
 - Token revocation cache is in memory and does not survive process restarts.
 - Production CS wire-protocol hardening remains vendor-specific integration work.
 - Sprint 8 offline cleanup and TICK provisioning clients are mock adapters unless deployment-specific clients are injected.
+# Sprint 13 Operations
+
+- Use `GET /api/v1/health` for liveness and `GET /api/v1/ready` for DB/CS readiness.
+- Use `GET /api/v1/admin/audit-log?subscriberId=...` for subscriber timelines across orders, inventory, transfers, cleanup, and notifications.
+- For SIM upgrade incidents, inspect `GET /api/v1/admin/sim-upgrade-events`.
+- For credit transfer incidents, inspect `GET /api/v1/transfer?senderSubscriberId=...` or `recipientSubscriberId=...`.

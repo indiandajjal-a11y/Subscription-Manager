@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { fail } from "./errors.js";
-import { nowIso, getProductOffering, listProductInventory, getProductOrder, getProductInventory } from "./domain.js";
+import { nowIso, getProductOffering, getProductOrder, getProductInventory } from "./domain.js";
 
 // ============================================================================
 // CUSTOMER SEGMENT (TMF629) MODEL - Segment Resolution Rules

@@ -98,3 +98,6 @@ Sprint 8 stable expected result:
 - `0` failures
 
 On Windows PowerShell, prefer `npm.cmd test`; `npm test` may invoke `npm.ps1` and fail when script execution is disabled.
+# Sprint 13 Configuration Notes
+
+Required non-test runtime variables now include `CS_ENDPOINT_URL`, `CS_TIMEOUT_MS`, and `JWT_SECRET`. Optional Sprint 13 variables include `DEVICE_MGMT_API_KEY`, `CS_CALLBACK_API_KEY`, `SIM_CHECK_MOCK_RESULT`, `TRANSFER_PIN_ENCRYPTION_KEY`, `TRANSFER_PIN_MAX_ATTEMPTS`, `TRANSFER_PIN_LOCKOUT_WINDOW_SECONDS`, and `TRANSFER_PIN_LOCKOUT_SECONDS`.

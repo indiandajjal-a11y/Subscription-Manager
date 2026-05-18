@@ -515,3 +515,24 @@ $order = Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/order
 Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/$($order.id)/validate" -ContentType "application/json" -Body '{}'
 Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/$($order.id)/fulfill" -ContentType "application/json" -Body '{}'
 ```
+# Sprint 13 API Examples
+
+```http
+POST /api/v1/sim-upgrade/device-event
+X-Device-Mgmt-Key: <key>
+
+{ "subscriberId": "2348012345678", "deviceId": "IMEI-123", "triggerType": "DEVICE_ACTIVATION" }
+```
+
+```http
+POST /api/v1/transfer/pin
+
+{ "subscriberId": "2348012345678", "pin": "1234" }
+```
+
+```http
+POST /api/v1/transfer/request
+Idempotency-Key: transfer-123
+
+{ "senderSubscriberId": "2348012345678", "recipientSubscriberId": "2348099999999", "amount": 100, "currency": "NGN", "pin": "1234" }
+```

@@ -3,7 +3,6 @@ import { fail } from "./errors.js";
 import {
   createTerminateOrder,
   executeProductOrderFulfillment,
-  getChannel,
   getProductOffering,
   getProductOrder,
   getSubscriberAccountByOrder,

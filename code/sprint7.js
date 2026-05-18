@@ -7,7 +7,6 @@ import {
   getChargingResolutionRecord,
   getProductInventory,
   getProductOffering,
-  getProductOrder,
   getShoppingCart,
   listNotificationEvents,
   nowIso,
@@ -280,6 +279,13 @@ function renderContext(db, event, channelType, balanceData) {
     bonusDeltaMB: event.payload?.bonusDeltaMB === undefined ? "" : formatDataVolume(event.payload.bonusDeltaMB),
     preProvisionBalance: event.payload?.preProvisionBalance === undefined ? "" : formatDataVolume(event.payload.preProvisionBalance),
     postProvisionBalance: event.payload?.postProvisionBalance === undefined ? "" : formatDataVolume(event.payload.postProvisionBalance),
+    transferId: event.payload?.transferId || "",
+    transferAmount: event.payload?.transferAmount === undefined ? "" : formatMoney(event.payload.transferAmount, currencyConfig),
+    transferCurrency: event.payload?.transferCurrency || currencyConfig?.currencyCode || "",
+    senderSubscriberId: event.payload?.senderSubscriberId || "",
+    recipientSubscriberId: event.payload?.recipientSubscriberId || "",
+    transferStatus: event.payload?.transferStatus || "",
+    transferCompletedAt: event.payload?.transferCompletedAt || "",
     daBalances
   };
 }
@@ -291,14 +297,14 @@ function simplePlaceholderValue(name, context, dateFormat) {
     if (!da) return "N/A";
     return daMatch[2] === "balance" ? formatDataVolume(da.balance) : formatDate(da.expiryDate || da.expiry, dateFormat);
   }
-  const inlineFormat = /^([A-Za-z0-9_]+)\|format:(.+)$/.exec(name);
+  const inlineFormat = /^(\w+)\|format:(.+)$/.exec(name);
   if (inlineFormat) return formatDate(context[inlineFormat[1]], inlineFormat[2]);
-  if (["startDate", "endDate", "activatedAt", "renewalDate", "closestExpiry"].includes(name)) return formatDate(context[name], dateFormat);
+  if (["startDate", "endDate", "activatedAt", "renewalDate", "closestExpiry", "transferCompletedAt"].includes(name)) return formatDate(context[name], dateFormat);
   return context[name] ?? "N/A";
 }
 
 function evaluateExpression(expression) {
-  const sanitized = expression.replace(/[^0-9+\-*/().\s]/g, "");
+  const sanitized = expression.replace(/[^0-9+*/().\s-]/g, "");
   if (!sanitized.trim()) return "N/A";
   try {
     const result = Function(`"use strict"; return (${sanitized});`)();
@@ -314,7 +320,7 @@ export async function renderTemplate(db, template, event, options = {}) {
   const context = renderContext(db, event, options.channelType || "SMS", balanceData);
   const dateFormat = options.dateFormat || process.env.NOTIFICATION_DATE_FORMAT || "DD-MM-YYYY HH:MM:SS";
   let body = template.bodyTemplate.replace(/\{\{expr:\s*([^}]+(?:\}\}[^}]*)*)\}\}/g, (_match, expr) => {
-    const replaced = expr.replace(/\{\{([^}]+)\}\}/g, (_placeholder, name) => String(simplePlaceholderValue(name.trim(), context, dateFormat)).replace(/[^0-9.\-]/g, ""));
+    const replaced = expr.replace(/\{\{([^}]+)\}\}/g, (_placeholder, name) => String(simplePlaceholderValue(name.trim(), context, dateFormat)).replace(/[^0-9.-]/g, ""));
     return evaluateExpression(replaced);
   });
   body = body.replace(/\{\{([^}]+)\}\}/g, (_match, name) => simplePlaceholderValue(name.trim(), context, dateFormat));

@@ -1,5 +1,13 @@
 # Subscription Manager Release Notes
 
+## v5.5 - Sprint 13 Stable Release
+
+- Added event-driven 4G SIM upgrade automation with DND exclusion, rate limiting, SIM type checks, CS callback dispatch, and subscriber accept/decline handling.
+- Added PIN-secured credit transfer with AES-256 encrypted PIN storage, PIN lockout, transfer limits, MA balance checks, CS debit/credit, reversal, and bilateral notifications.
+- Added idempotency support, unified audit log, `/api/v1/health`, `/api/v1/ready`, and order `notificationDispatched` status.
+- Added `psoFlagCharacteristicName` support on product offerings and documented remaining open gaps.
+- Added Sprint 13 automated tests and Sonar quality rubric.
+
 ## V1 - Sprint 1
 
 - Established TMF620 Product Catalog foundation.

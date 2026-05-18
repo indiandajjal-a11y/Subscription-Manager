@@ -33,7 +33,17 @@ export function createStore() {
     bonusDetectionConfigs: new Map(),
     bonusDetectionRecords: new Map(),
     tickProvisioningRules: new Map(),
-    tariffMigrationRequests: new Map()
+    tariffMigrationRequests: new Map(),
+    // Sprint 9 additions
+    customerPreferences: new Map(),
+    simUpgradeRateLimits: new Map(),
+    simUpgradeEvents: new Map(),
+    simUpgradeConfigs: new Map(),
+    subscriberPins: new Map(),
+    transferLimits: new Map(),
+    creditTransferRequests: new Map(),
+    pinAttemptLogs: new Map(),
+    idempotencyRecords: new Map()
   };
 }
 
