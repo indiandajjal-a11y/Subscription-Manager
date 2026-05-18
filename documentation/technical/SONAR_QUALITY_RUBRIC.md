@@ -27,6 +27,13 @@ Use this rubric before merging sprint work.
 - Add or update a sprint test whenever a Sonar fix changes behavior-adjacent code.
 - Keep backward-compatible reason codes unless a sprint explicitly introduces a new code path.
 
+## Current Snapshot Handling
+
+- `all-issues.json` from 18 May 2026 reported 91 issues: 1 blocker, 12 critical, 66 major, and 12 minor.
+- Most remaining findings are structural complexity in large legacy router/domain functions. Do not expand those functions when adding new sprint work; put new behavior in focused modules such as `sprint8.js`.
+- Fix local, low-risk findings immediately when touching nearby code, especially regex simplifications, unused imports, nested ternaries, duplicate mock methods, and plain-object throws.
+- Defer broad router decomposition to a dedicated refactor branch with HTTP regression coverage because `app.js` has high behavioral density.
+
 ## Review Checklist
 
 - No `if ((x = ...))` patterns.

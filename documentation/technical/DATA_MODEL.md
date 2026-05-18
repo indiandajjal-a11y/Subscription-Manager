@@ -476,3 +476,85 @@ Key fields:
 - `linkedBy`
 
 An active link can apply a STAFF segment override during order validation for the linked offering only.
+
+## Party
+
+Sprint 8 stores subscriber identity lifecycle state.
+
+Key fields:
+
+- `subscriberId`
+- `status`
+- `decommissionedAt`
+- `decommissionedBy`
+- `decommissionReason`
+
+Statuses are `active` and `decommissioned`.
+
+## DormantCleanupRequest
+
+Sprint 8 tracks CRM-driven dormant subscriber cleanup.
+
+Key fields:
+
+- `subscriberId`
+- `requestedBy`
+- `status`
+- `subscriptionsTerminated`
+- `partyDecommissioned`
+- `offlineCleanupInvoked`
+- `terminationFailures`
+
+## BonusDetectionConfig
+
+Sprint 8 stores per-offering bonus detection settings.
+
+Key fields:
+
+- `productOfferingId`
+- `bonusDetectionEnabled`
+- `bonusDataSourceDaId`
+- `bonusThresholdMB`
+- `notificationEventType`
+
+## BonusDetectionRecord
+
+Sprint 8 audits post-provision bonus checks.
+
+Key fields:
+
+- `orderId`
+- `subscriptionId`
+- `daId`
+- `preProvisionBalance`
+- `postProvisionBalance`
+- `deltaMB`
+- `bonusDetected`
+- `notificationEventId`
+
+## TICKProvisioningRule
+
+Sprint 8 stores service-class transition rules for TICK provisioning.
+
+Key fields:
+
+- `triggerType`
+- `fromServiceClass`
+- `toServiceClass`
+- `tickOfferId`
+- `status`
+
+## TariffMigrationRequest
+
+Sprint 8 links modify ProductOrders to tariff migration state.
+
+Key fields:
+
+- `orderId`
+- `subscriberId`
+- `fromServiceClass`
+- `toServiceClass`
+- `tickRuleApplied`
+- `tickAction`
+- `tickOfferId`
+- `status`

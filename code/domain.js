@@ -477,6 +477,10 @@ function ensureCartUsable(cart, allowClosed = false) {
 export function createShoppingCart(db, body, config = configFromEnv()) {
   assertRequired(body.channelId, "channelId");
   assertRequired(body.subscriberId, "subscriberId");
+  const party = [...(db.parties || new Map()).values()].find((item) => item.subscriberId === body.subscriberId);
+  if (party?.status === "decommissioned") {
+    fail(422, "SUBSCRIBER_DECOMMISSIONED", `Subscriber ${body.subscriberId} has been decommissioned.`, "subscriberId");
+  }
   if (db.channels?.size > 0) {
     const channel = [...db.channels.values()].find((item) => item.id === body.channelId || item.channelId === body.channelId || item.name === body.channelId);
     if (!channel) fail(422, "UNKNOWN_CHANNEL", "Channel is not registered.", "channelId");
@@ -623,8 +627,8 @@ function applyStaffSegmentOverrideIfEligible(db, subscriberAccount, offeringId) 
 function conditionMatches(condition, attributes) {
   if (!condition) return true;
 
-  const CONDITION_REGEX =
-    /^\s*([A-Za-z0-9_]+)\s*(==|!=)\s*['"]?([^'"\\\r\n]{1,256})['"]?\s*$/;
+const CONDITION_REGEX =
+    /^\s*(\w+)\s*(==|!=)\s*['"]?([^'"\\\r\n]{1,256})['"]?\s*$/;
 
   const match = CONDITION_REGEX.exec(condition);
 

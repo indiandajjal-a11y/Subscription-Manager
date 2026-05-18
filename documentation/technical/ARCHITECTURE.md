@@ -16,6 +16,8 @@ Sprint 6 adds subscriber lifecycle automation: CS attribute update configuration
 
 Sprint 7 adds the notification presentation layer: TMF681-style templates, placeholder/math rendering, live GBAD balance lookup at dispatch time, USSD/SMS dispatch records, currency configuration, combined channel subscribe flow, and staff secondary-number links.
 
+Sprint 8 adds operational orchestration for dormant subscriber cleanup, consolidated balance checks, bonus follow-up notifications, and tariff migration-driven TICK provisioning.
+
 ## Runtime Components
 
 `code/server.js`
@@ -50,6 +52,10 @@ Sprint 7 adds the notification presentation layer: TMF681-style templates, place
 `code/sprint7.js`
 
 - Provides Sprint 7 helper modules for CommunicationTemplate, NotificationDispatchRecord, CurrencyConfig, template rendering, notification dispatch, StaffNumberLink, staff segment override helpers, and the combined `subscribeCart` flow
+
+`code/sprint8.js`
+
+- Provides Sprint 8 helper modules for Party lifecycle, DormantCleanupRequest orchestration, consolidated balance checks, BonusDetectionConfig/Record, TICKProvisioningRule, TariffMigrationRequest, mock offline cleanup, and mock TICK provisioning
 
 `code/sprint4.js`
 
@@ -183,6 +189,27 @@ Sprint 7 adds:
 - `DELETE /api/v1/staff/links/:linkId`
 - `POST /api/v1/cart/:cartId/subscribe`
 
+Sprint 8 adds:
+
+- `POST /api/v1/admin/parties`
+- `GET /api/v1/admin/parties`
+- `POST /api/v1/admin/dormant-cleanup`
+- `GET /api/v1/admin/dormant-cleanup`
+- `GET /api/v1/admin/dormant-cleanup/:requestId`
+- `GET /api/v1/subscribers/:subscriberId/balance-check`
+- `POST /api/v1/catalog/offerings/:id/bonus-detection`
+- `GET /api/v1/catalog/offerings/:id/bonus-detection`
+- `PATCH /api/v1/catalog/offerings/:id/bonus-detection`
+- `GET /api/v1/admin/bonus-detection`
+- `GET /api/v1/admin/bonus-detection-records`
+- `POST /api/v1/admin/tick-rules`
+- `GET /api/v1/admin/tick-rules`
+- `GET /api/v1/admin/tick-rules/:ruleId`
+- `PATCH /api/v1/admin/tick-rules/:ruleId`
+- `DELETE /api/v1/admin/tick-rules/:ruleId`
+- `POST /api/v1/orders` with `orderType: "modify"` and `modifyType: "TARIFF_MIGRATION"`
+- `GET /api/v1/orders/:orderId/tariff-migration`
+
 ## Testing Strategy
 
 `testing/sprint1.test.js`
@@ -229,9 +256,16 @@ Sprint 7 adds:
 - Staff secondary-number segment override
 - Combined USSD/SMS subscribe flow
 
+`testing/sprint8.test.js`
+
+- Dormant cleanup and decommissioned-subscriber guard
+- Consolidated balance check rendering and live GBAD call behavior
+- Bonus detection records and dispatchable notification events
+- TICK rule matching and tariff migration fulfillment
+
 Current full-suite result:
 
-- `105` tests passing
+- `110` tests passing
 - `0` failures
 
 Run all tests:

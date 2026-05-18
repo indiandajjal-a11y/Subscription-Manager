@@ -24,10 +24,13 @@ Sprint 6 stable verification closes the lifecycle, renewal, gifting, segment, CS
 
 Sprint 7 adds the Sprint 11 notification and presentation layer: communication templates, dispatch records, live-balance placeholder rendering, SMS/USSD channel formatting, currency configuration, combined USSD/SMS subscribe flow, and staff secondary-number linking.
 
+Sprint 8 adds operational use cases from the Sprint 12 prompt: dormant subscriber cleanup, consolidated balance check, bonus follow-up notification, and tariff migration with TICK provisioning rules.
+
 Current stable scope:
 
 - Sprint 5 cancellation and advanced charging are verified by the full test suite.
 - Sprint 6 adds CustomerSegment resolution, `resolvedSegmentId` snapshots, customer-segment eligibility/discount support, CS attribute update configuration, renewal schedule helpers, gift order validation, PartyRelationship records, recipient-aware notifications, and per-offering compensation policy defaults.
 - Sprint 6 API coverage includes CustomerSegment, RenewalSchedule, and PartyRelationship routes.
 - Sprint 7 API coverage includes template management, dispatch records, currency configuration, staff links, and combined cart subscription.
-- Automated verification: `npm.cmd test` passes all 105 tests.
+- Sprint 8 API coverage includes Party records, dormant cleanup, balance check rendering, bonus detection records, TICK rules, and tariff migration orders.
+- Automated verification: `npm.cmd test` passes all 110 tests.

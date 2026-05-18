@@ -96,6 +96,29 @@ import {
   updateCommunicationTemplate,
   updateCurrencyConfig
 } from "./sprint7.js";
+import {
+  createBonusDetectionConfig,
+  createDormantCleanupRequest,
+  createParty,
+  createTariffMigrationOrder,
+  createTickProvisioningRule,
+  deactivateTickProvisioningRule,
+  fulfillTariffMigrationOrder,
+  getBonusDetectionConfig,
+  getConsolidatedBalanceCheck,
+  getDormantCleanupRequest,
+  getTariffMigrationRequest,
+  getTickProvisioningRule,
+  listBonusDetectionConfigs,
+  listBonusDetectionRecords,
+  listDormantCleanupRequests,
+  listParties,
+  listTickProvisioningRules,
+  runBonusDetectionForOrder,
+  updateBonusDetectionConfig,
+  updateTickProvisioningRule,
+  validateTariffMigrationOrder
+} from "./sprint8.js";
 
 function send(res, status, body) {
   res.writeHead(status, { "content-type": "application/json" });
@@ -402,6 +425,79 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
         return send(res, 200, result);
       }
 
+      if (method === "POST" && pathname === "/api/v1/admin/parties") {
+        const result = createParty(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/parties") {
+        return send(res, 200, listParties(db, query));
+      }
+      if (method === "POST" && pathname === "/api/v1/admin/dormant-cleanup") {
+        const result = await createDormantCleanupRequest(db, await readJson(req), {
+          channelType: auth?.channelType || query.channelType || "CRM",
+          channelId: auth?.channelId || query.channelId || "CRM",
+          offlineCleanupClient: mergedConfig.offlineCleanupClient
+        });
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/dormant-cleanup") {
+        return send(res, 200, listDormantCleanupRequests(db, query));
+      }
+      params = is(method, "GET", pathname, "/api/v1/admin/dormant-cleanup/:requestId");
+      if (params) {
+        return send(res, 200, getDormantCleanupRequest(db, params.requestId));
+      }
+
+      params = is(method, "POST", pathname, "/api/v1/catalog/offerings/:id/bonus-detection");
+      if (params) {
+        const result = createBonusDetectionConfig(db, params.id, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/bonus-detection") {
+        return send(res, 200, listBonusDetectionConfigs(db, query));
+      }
+      params = is(method, "GET", pathname, "/api/v1/catalog/offerings/:id/bonus-detection");
+      if (params) {
+        return send(res, 200, getBonusDetectionConfig(db, params.id));
+      }
+      params = is(method, "PATCH", pathname, "/api/v1/catalog/offerings/:id/bonus-detection");
+      if (params) {
+        const result = updateBonusDetectionConfig(db, params.id, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/bonus-detection-records") {
+        return send(res, 200, listBonusDetectionRecords(db, query));
+      }
+
+      if (method === "POST" && pathname === "/api/v1/admin/tick-rules") {
+        const result = createTickProvisioningRule(db, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 201, result);
+      }
+      if (method === "GET" && pathname === "/api/v1/admin/tick-rules") {
+        return send(res, 200, listTickProvisioningRules(db, query));
+      }
+      params = is(method, "GET", pathname, "/api/v1/admin/tick-rules/:ruleId");
+      if (params) {
+        return send(res, 200, getTickProvisioningRule(db, params.ruleId));
+      }
+      params = is(method, "PATCH", pathname, "/api/v1/admin/tick-rules/:ruleId");
+      if (params) {
+        const result = updateTickProvisioningRule(db, params.ruleId, await readJson(req));
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+      params = is(method, "DELETE", pathname, "/api/v1/admin/tick-rules/:ruleId");
+      if (params) {
+        const result = deactivateTickProvisioningRule(db, params.ruleId);
+        await saveIfNeeded(persistence, db);
+        return send(res, 200, result);
+      }
+
       if (method === "POST" && pathname === "/api/v1/catalog/segments") {
         const result = createCustomerSegment(db, await readJson(req));
         await saveIfNeeded(persistence, db);
@@ -560,9 +656,11 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       }
       if (method === "POST" && pathname === "/api/v1/orders") {
         const body = await readJson(req);
-        const result = body.orderType === "terminate"
-          ? createTerminateOrderFromSubscription(db, body, { ...auth, subscriberId: body.subscriberId })
-          : captureProductOrderFromCart(db, body);
+        const result = body.orderType === "modify" && body.modifyType === "TARIFF_MIGRATION"
+          ? createTariffMigrationOrder(db, body)
+          : body.orderType === "terminate"
+            ? createTerminateOrderFromSubscription(db, body, { ...auth, subscriberId: body.subscriberId })
+            : captureProductOrderFromCart(db, body);
         await saveIfNeeded(persistence, db);
         return send(res, 201, result);
       }
@@ -577,7 +675,9 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
         await readJson(req);
         const order = getProductOrder(db, params.orderId);
         ensureChannelMatch(auth, order.channelId);
-        const result = mergedConfig.enableAuthEnforcement
+        const result = order.orderType === "modify" && order.modifyType === "TARIFF_MIGRATION"
+          ? await validateTariffMigrationOrder(db, params.orderId, { chargingSystemClient: mergedConfig.chargingSystemClient })
+          : mergedConfig.enableAuthEnforcement
           ? await validateWithChargingSystem(db, params.orderId, mergedConfig, mergedConfig.chargingSystemClient)
           : validateProductOrder(db, params.orderId, {});
         await saveIfNeeded(persistence, db);
@@ -587,7 +687,16 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       if (params) {
         const order = getProductOrder(db, params.orderId);
         ensureChannelMatch(auth, order.channelId);
-        const result = executeProductOrderFulfillment(db, params.orderId, await readJson(req));
+        const body = await readJson(req);
+        const result = order.orderType === "modify" && order.modifyType === "TARIFF_MIGRATION"
+          ? await fulfillTariffMigrationOrder(db, params.orderId, {
+            chargingSystemClient: mergedConfig.chargingSystemClient,
+            tickProvisioningClient: mergedConfig.tickProvisioningClient
+          })
+          : executeProductOrderFulfillment(db, params.orderId, body);
+        if (result.status === "completed" && ["provision", "gift"].includes(result.orderType)) {
+          await runBonusDetectionForOrder(db, params.orderId, { chargingSystemClient: mergedConfig.chargingSystemClient });
+        }
         await saveIfNeeded(persistence, db);
         return send(res, result.status === "failed" ? 422 : 200, result);
       }
@@ -620,6 +729,12 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
         if (!result) fail(404, "CHARGING_RESOLUTION_NOT_FOUND", "ChargingResolutionRecord was not found.", "orderId");
         return send(res, 200, result);
       }
+      params = is(method, "GET", pathname, "/api/v1/orders/:orderId/tariff-migration");
+      if (params) {
+        const order = getProductOrder(db, params.orderId);
+        ensureChannelMatch(auth, order.channelId);
+        return send(res, 200, getTariffMigrationRequest(db, params.orderId));
+      }
 
       if (method === "GET" && pathname === "/api/v1/inventory") {
         return send(res, 200, listProductInventory(db, query));
@@ -631,6 +746,15 @@ if (route(method, pathname, "GET", "/api/v1/catalog/specifications")) {
       params = is(method, "GET", pathname, "/api/v1/subscriptions/:subscriptionId");
       if (params) {
         return send(res, 200, getProductInventory(db, params.subscriptionId));
+      }
+      params = is(method, "GET", pathname, "/api/v1/subscribers/:subscriberId/balance-check");
+      if (params) {
+        const result = await getConsolidatedBalanceCheck(db, params.subscriberId, query, {
+          channelType: auth?.channelType || query.channelType || "USSD",
+          channelId: auth?.channelId || query.channelId,
+          chargingSystemClient: mergedConfig.chargingSystemClient
+        });
+        return send(res, 200, result);
       }
       params = is(method, "PATCH", pathname, "/api/v1/inventory/:inventoryId/status");
       if (params) {

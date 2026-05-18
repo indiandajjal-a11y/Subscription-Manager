@@ -82,6 +82,8 @@ npm.cmd start
 | `STORAGE_PROVIDER` | memory | Set to `postgres` for PostgreSQL persistence |
 | `NOTIFICATION_SMS_MAX_LENGTH` | `160` | Sprint 7 SMS truncation limit |
 | `NOTIFICATION_DATE_FORMAT` | `DD-MM-YYYY HH:MM:SS` | Sprint 7 default date rendering format |
+| `OFFLINE_CLEANUP_URL` | none | Reserved for the real Sprint 8 offline cleanup adapter; local runtime uses the mock client |
+| `TICK_GATEWAY_URL` | none | Reserved for the real Sprint 8 TICK provisioning adapter; local runtime uses the mock client |
 
 ## Run Tests
 
@@ -90,9 +92,9 @@ cd "C:\Subscription Manager"
 npm.cmd test
 ```
 
-Sprint 7 stable expected result:
+Sprint 8 stable expected result:
 
-- `105` passing tests
+- `110` passing tests
 - `0` failures
 
 On Windows PowerShell, prefer `npm.cmd test`; `npm test` may invoke `npm.ps1` and fail when script execution is disabled.

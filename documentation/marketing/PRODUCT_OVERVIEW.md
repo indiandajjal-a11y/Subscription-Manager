@@ -46,3 +46,7 @@ Current stable capabilities now include:
 - Operator-configurable currency symbols, minor units, and expiry date presentation
 - Reduced-step USSD/SMS purchase flow
 - Staff secondary-number linking for discounted staff plans
+- Dormant subscriber cleanup for safe identifier reallocation
+- Consolidated USSD-ready bundle balance check
+- Bonus follow-up notification when a configured data bonus is detected
+- Tariff migration with configurable TICK provisioning or deprovisioning

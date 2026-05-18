@@ -110,8 +110,19 @@ If `CS_ENDPOINT_URL` is not set, the Sprint 4 CS client uses local mock response
 - For notification issues, inspect the source `NotificationEvent`, selected `CommunicationTemplate`, rendered `NotificationDispatchRecord.renderedBody`, and `failureReason`.
 - For SMS length complaints, check `NOTIFICATION_SMS_MAX_LENGTH` and template `maxLength`.
 
+## Sprint 8 Operational Checks
+
+- Run `npm.cmd test` before release. Expected stable result: `110` passing tests, `0` failures.
+- Confirm dormant cleanup requests through `/api/v1/admin/dormant-cleanup`.
+- Confirm decommissioned subscribers are blocked from new carts with `SUBSCRIBER_DECOMMISSIONED`.
+- Confirm balance checks through `/api/v1/subscribers/{subscriberId}/balance-check`.
+- Confirm bonus detection configuration through `/api/v1/catalog/offerings/{offeringId}/bonus-detection` and records through `/api/v1/admin/bonus-detection-records`.
+- Confirm TICK rules through `/api/v1/admin/tick-rules`.
+- For tariff migration issues, inspect the modify `ProductOrder`, linked `TariffMigrationRequest`, CS attribute update step, and `tickProvisioning` or `tickDeprovisioning` step.
+
 ## Known Limitations
 
 - PostgreSQL adapter writes full in-memory state after mutations; this is acceptable for prototype scale but should be replaced by per-aggregate repositories before high-volume production use.
 - Token revocation cache is in memory and does not survive process restarts.
 - Production CS wire-protocol hardening remains vendor-specific integration work.
+- Sprint 8 offline cleanup and TICK provisioning clients are mock adapters unless deployment-specific clients are injected.

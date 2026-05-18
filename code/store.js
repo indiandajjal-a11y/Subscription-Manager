@@ -26,7 +26,14 @@ export function createStore() {
     communicationTemplates: new Map(),
     notificationDispatchRecords: new Map(),
     currencyConfigs: new Map(),
-    staffNumberLinks: new Map()
+    staffNumberLinks: new Map(),
+    // Sprint 8 additions
+    parties: new Map(),
+    dormantCleanupRequests: new Map(),
+    bonusDetectionConfigs: new Map(),
+    bonusDetectionRecords: new Map(),
+    tickProvisioningRules: new Map(),
+    tariffMigrationRequests: new Map()
   };
 }
 

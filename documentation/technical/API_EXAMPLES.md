@@ -449,3 +449,69 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/staff/link" -C
   "offeringId": "{staffOfferingId}"
 }'
 ```
+
+## Sprint 8 Examples
+
+Run dormant cleanup for a subscriber:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/admin/dormant-cleanup" -ContentType "application/json" -Body '{
+  "subscriberId": "2348012345678",
+  "channelId": "CRM",
+  "decommissionReason": "MSISDN_REALLOCATION"
+}'
+```
+
+Run a consolidated balance check:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/v1/subscribers/2348012345678/balance-check?channelType=USSD"
+```
+
+Create a BALANCE_CHECK template with an active subscription loop:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/admin/templates" -ContentType "application/json" -Body '{
+  "name": "USSD balance check",
+  "eventType": "BALANCE_CHECK",
+  "channelType": "USSD",
+  "bodyTemplate": "Bundles:\n{{#each activeSubscriptions}}{{index}}. {{offeringName}} {{dataVolume}} expires {{endDate}}\n{{/each}}\nMain {{mainBalance}} Total {{aggregateBalance}}"
+}'
+```
+
+Enable bonus detection for an offering:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/catalog/offerings/{offeringId}/bonus-detection" -ContentType "application/json" -Body '{
+  "bonusDataSourceDaId": "BONUS_DA_1",
+  "bonusThresholdMB": 100,
+  "notificationEventType": "DATA_BONUS_AWARDED"
+}'
+```
+
+Create a TICK provisioning rule:
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/admin/tick-rules" -ContentType "application/json" -Body '{
+  "name": "Prepaid to postpaid TICK",
+  "triggerType": "ADD_TICK",
+  "fromServiceClass": ["PREPAID"],
+  "toServiceClass": ["POSTPAID"],
+  "tickOfferId": "TICK-POSTPAID"
+}'
+```
+
+Submit and process a tariff migration:
+
+```powershell
+$order = Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders" -ContentType "application/json" -Body '{
+  "orderType": "modify",
+  "modifyType": "TARIFF_MIGRATION",
+  "subscriberId": "2348012345678",
+  "channelId": "CRM",
+  "toServiceClass": "POSTPAID"
+}'
+
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/$($order.id)/validate" -ContentType "application/json" -Body '{}'
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/v1/orders/$($order.id)/fulfill" -ContentType "application/json" -Body '{}'
+```

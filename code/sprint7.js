@@ -273,8 +273,13 @@ function renderContext(db, event, channelType, balanceData) {
     mainBalanceCurrency: balanceData?.currency || currencyConfig?.currencyCode || "",
     aggregateBalance: formatDataVolume(aggregate),
     closestExpiry: expiries[0] || null,
+    aggregateDataBalance: event.payload?.aggregateDataBalance || formatDataVolume(aggregate),
+    activeSubscriptionCount: event.payload?.activeSubscriptionCount ?? "",
     dataVolume: offering ? formatDataVolume(Number(db.productSpecifications.get(offering.productSpecificationId)?.characteristics.find((item) => item.name === "dataVolume")?.value || 0) * 1024) : "",
     validityDays: offering ? db.productSpecifications.get(offering.productSpecificationId)?.characteristics.find((item) => item.name === "validityPeriod")?.value || "" : "",
+    bonusDeltaMB: event.payload?.bonusDeltaMB === undefined ? "" : formatDataVolume(event.payload.bonusDeltaMB),
+    preProvisionBalance: event.payload?.preProvisionBalance === undefined ? "" : formatDataVolume(event.payload.preProvisionBalance),
+    postProvisionBalance: event.payload?.postProvisionBalance === undefined ? "" : formatDataVolume(event.payload.postProvisionBalance),
     daBalances
   };
 }

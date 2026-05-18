@@ -42,3 +42,13 @@
 - Added StaffNumberLink management and STAFF segment override for linked secondary numbers.
 - Addressed Sonar major findings for inline route assignments, duplicate mock CS methods, non-Error throws, and nested ternaries.
 - Verified full suite: 105 passing tests, 0 failures.
+
+## V8 - Sprint 8 Stable
+
+- Added Party lifecycle records and dormant cleanup orchestration for CRM-driven subscriber decommissioning.
+- Added decommissioned-subscriber guard for new cart creation.
+- Added consolidated balance check with active ProductInventory aggregation, live GBAD lookup, and BALANCE_CHECK template rendering.
+- Added BonusDetectionConfig and BonusDetectionRecord with DATA_BONUS_AWARDED notification event support.
+- Added tariff migration modify orders, TICKProvisioningRule CRUD, TICK add/remove fulfillment steps, and TARIFF_MIGRATION_COMPLETED events.
+- Added Sprint 8 automated coverage and refreshed Sonar prevention rubric.
+- Verified full suite: 110 passing tests, 0 failures.

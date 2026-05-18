@@ -48,3 +48,12 @@ The platform now also includes:
 - Currency configuration for subscriber-facing amount display
 - Reduced-step cart subscription for channel flows
 - Staff secondary-number linking and STAFF segment override support
+
+## Sprint 8 Stable Additions
+
+The platform now supports operational customer-care and network-change use cases:
+
+- Dormant subscriber decommissioning with inventory termination and offline cleanup handoff
+- Consolidated active-bundle balance checks for USSD and SMS-style channels
+- Follow-up data bonus detection and notification events
+- Tariff migration orders with configurable TICK add/remove rules
